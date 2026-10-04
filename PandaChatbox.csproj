@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <!-- 19041 = Windows 10 2004+, needed for the Windows media session API (Spotify/YouTube/etc. detection) -->
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>PandaChatbox</AssemblyName>
+    <RootNamespace>PandaChatbox</RootNamespace>
+    <Version>3.1.0</Version>
+    <ApplicationIcon>favicon.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Resource Include="favicon.ico" />
+    <Compile Remove="tools\**\*.cs" />
+  </ItemGroup>
+
+</Project>

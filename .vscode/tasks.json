@@ -1,0 +1,38 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build",
+            "type": "process",
+            "command": "dotnet",
+            "args": ["run", "--project", "${workspaceFolder}/tools/PandaChatbox.Build/PandaChatbox.Build.csproj", "--", "build"],
+            "group": { "kind": "build", "isDefault": true },
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "run",
+            "type": "process",
+            "command": "dotnet",
+            "args": ["run", "--project", "${workspaceFolder}/tools/PandaChatbox.Build/PandaChatbox.Build.csproj", "--", "run"],
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "publish (single exe)",
+            "type": "process",
+            "command": "dotnet",
+            "args": [
+                "run", "--project", "${workspaceFolder}/tools/PandaChatbox.Build/PandaChatbox.Build.csproj", "--", "publish"
+            ],
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "build installer",
+            "type": "process",
+            "command": "dotnet",
+            "args": [
+                "run", "--project", "${workspaceFolder}/tools/PandaChatbox.Build/PandaChatbox.Build.csproj", "--", "installer"
+            ],
+            "problemMatcher": "$msCompile"
+        }
+    ]
+}

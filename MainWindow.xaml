@@ -1,0 +1,805 @@
+<Window x:Class="PandaChatbox.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:PandaChatbox"
+        Title="Panda Chatbox" Icon="favicon.ico" Width="1136" Height="810" MinWidth="980" MinHeight="640"
+        Background="{DynamicResource Bg}" Foreground="{DynamicResource Text}" FontFamily="Segoe UI Variable Text, Segoe UI" FontSize="14"
+        UseLayoutRounding="True"
+        TextOptions.TextFormattingMode="Ideal" TextOptions.TextRenderingMode="Grayscale"
+        RenderOptions.BitmapScalingMode="HighQuality" RenderOptions.EdgeMode="Unspecified"
+        Topmost="{Binding Topmost, Mode=TwoWay}">
+    <Window.Resources>
+        <Style x:Key="WindowControlButton" TargetType="Button">
+            <Setter Property="Width" Value="36"/>
+            <Setter Property="Height" Value="36"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="FontFamily" Value="{StaticResource Icons}"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground" Value="{DynamicResource Text}"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="ButtonBorder" Background="{TemplateBinding Background}" CornerRadius="6">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ButtonBorder" Property="Background" Value="{DynamicResource CardHi}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="ButtonBorder" Property="Background" Value="{DynamicResource Accent}"/>
+                            </Trigger>
+                            <MultiTrigger>
+                                <MultiTrigger.Conditions>
+                                    <Condition Property="Tag" Value="Close"/>
+                                    <Condition Property="IsMouseOver" Value="True"/>
+                                </MultiTrigger.Conditions>
+                                <Setter TargetName="ButtonBorder" Property="Background" Value="#E81123"/>
+                            </MultiTrigger>
+                            <MultiTrigger>
+                                <MultiTrigger.Conditions>
+                                    <Condition Property="Tag" Value="Close"/>
+                                    <Condition Property="IsPressed" Value="True"/>
+                                </MultiTrigger.Conditions>
+                                <Setter TargetName="ButtonBorder" Property="Background" Value="#C50F1F"/>
+                            </MultiTrigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="72"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- ===== header ===== -->
+        <Border Grid.Row="0" Background="{DynamicResource Header}" BorderBrush="{DynamicResource Edge}" BorderThickness="0,0,0,2">
+            <Grid Margin="16,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <Canvas Width="48" Height="48" VerticalAlignment="Center" Margin="0,0,12,0"
+                        MouseLeftButtonDown="Header_DragMove">
+                    <Ellipse Canvas.Left="4" Canvas.Top="3" Width="14" Height="14" Fill="#111111"/>
+                    <Ellipse Canvas.Left="30" Canvas.Top="3" Width="14" Height="14" Fill="#111111"/>
+                    <Ellipse Canvas.Left="6" Canvas.Top="9" Width="36" Height="36" Fill="White"/>
+                    <Ellipse Canvas.Left="12" Canvas.Top="21" Width="10" Height="12" Fill="#111111"/>
+                    <Ellipse Canvas.Left="26" Canvas.Top="21" Width="10" Height="12" Fill="#111111"/>
+                    <Ellipse Canvas.Left="15" Canvas.Top="24" Width="5" Height="5" Fill="White"/>
+                    <Ellipse Canvas.Left="28" Canvas.Top="24" Width="5" Height="5" Fill="White"/>
+                    <Ellipse Canvas.Left="21" Canvas.Top="33" Width="6" Height="5" Fill="{DynamicResource Pink}"/>
+                </Canvas>
+
+                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,24,0"
+                            MouseLeftButtonDown="Header_DragMove">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="VRC OSC" FontSize="12.5" Foreground="{DynamicResource Pink}"/>
+                        <TextBlock Text="Made by AstralShadows" FontSize="12.5" Foreground="{DynamicResource Lilac}" Margin="10,0,0,0"/>
+                    </StackPanel>
+                    <TextBlock Text="Panda Chatbox" FontSize="26" FontWeight="Bold" Margin="0,-3,0,0"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                    <RadioButton Style="{StaticResource Tab}" Content="Status" Tag="0" IsChecked="True" Checked="Tab_Checked"/>
+                    <RadioButton Style="{StaticResource Tab}" Content="Chat" Tag="1" Checked="Tab_Checked"/>
+                    <RadioButton Style="{StaticResource Tab}" Content="Settings" Tag="2" Checked="Tab_Checked"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="3" VerticalAlignment="Center" Margin="16,0,0,0">
+                    <TextBlock Text="Send to VRChat" FontSize="12.5" Foreground="{DynamicResource Muted}"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                        <ToggleButton Style="{StaticResource Switch}" IsChecked="{Binding Send}" Click="Send_Click"/>
+                        <Ellipse x:Name="SendDot" Width="10" Height="10" Fill="{DynamicResource Green}" Margin="12,0,6,0"/>
+                        <TextBlock x:Name="SendBadge" Text="Running" FontWeight="Bold" VerticalAlignment="Center" Foreground="{DynamicResource Green}"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <StackPanel x:Name="WindowButtons" Grid.Column="4" Orientation="Horizontal"
+                            VerticalAlignment="Center" Margin="12,0,0,0">
+                    <Button Style="{StaticResource WindowControlButton}" Content="&#xE921;"
+                            ToolTip="Minimize" Click="Minimize_Click"/>
+                    <Button x:Name="MaximizeButton" Style="{StaticResource WindowControlButton}"
+                            Content="&#xE922;" ToolTip="Maximize" Click="Maximize_Click"/>
+                    <Button Style="{StaticResource WindowControlButton}" Content="&#xE8BB;" Tag="Close"
+                            ToolTip="Close" Click="Close_Click"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- ===== body ===== -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="300"/>
+            </Grid.ColumnDefinitions>
+
+            <Grid Grid.Column="0" Margin="16,14,6,12">
+
+                <!-- ================= STATUS PAGE ================= -->
+                <Grid x:Name="PageStatus" Margin="0,0,10,0">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <DockPanel Grid.Row="0" Margin="0,0,0,12">
+                        <ToggleButton DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="{Binding ShowStatus}"
+                                      ToolTip="Show the status line in your chatbox"/>
+                        <Button DockPanel.Dock="Right" Content="Clear all" Margin="0,0,16,0" Padding="12,4" Click="ClearAll_Click"/>
+                        <TextBlock DockPanel.Dock="Right" x:Name="StatusSummary" Style="{StaticResource MutedText}"
+                                   VerticalAlignment="Center" Margin="0,0,16,0"/>
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource CardTitle}" Text="Status messages"/>
+                            <TextBlock Style="{StaticResource MutedText}" Margin="0,2,0,0"
+                                       Text="These rotate on the top line of your chatbox. Power = in rotation, heart = favorite. Drag a message to reorder, double-click to edit."/>
+                        </StackPanel>
+                    </DockPanel>
+
+                    <ScrollViewer x:Name="StatusScroll" Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                        <ItemsControl x:Name="StatusList" Margin="0,0,8,0">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Margin="0,0,0,6" CornerRadius="8" Background="{DynamicResource Card}"
+                                            AllowDrop="True" DragOver="Row_DragOver" Drop="Row_Drop">
+                                        <Grid Height="42">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="40"/>
+                                                <ColumnDefinition Width="36"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="36"/>
+                                                <ColumnDefinition Width="116"/>
+                                                <ColumnDefinition Width="42"/>
+                                            </Grid.ColumnDefinitions>
+
+                                            <!-- power / now-playing -->
+                                            <Border Grid.Column="0" Background="{DynamicResource Field}" CornerRadius="8,0,0,8">
+                                                <ToggleButton Style="{StaticResource PowerToggle}" Focusable="False"
+                                                              IsChecked="{Binding Enabled, Mode=TwoWay}" Click="RowChanged_Click"
+                                                              ToolTip="Include in rotation"/>
+                                            </Border>
+
+                                            <!-- delete -->
+                                            <Border Grid.Column="1" Background="{DynamicResource Card}">
+                                                <Button Style="{StaticResource TrashButton}" Content="&#xE74D;" Focusable="False"
+                                                        Click="RowDelete_Click" ToolTip="Delete"/>
+                                            </Border>
+
+                                            <!-- text (drag me / double-click to edit) -->
+                                            <Border Grid.Column="2" Background="{DynamicResource CardHi}"
+                                                    MouseLeftButtonDown="Text_MouseDown" MouseMove="Text_MouseMove">
+                                                <Grid>
+                                                    <TextBlock Text="{Binding Text}" Margin="14,0" FontSize="15"
+                                                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis">
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                                                                <Setter Property="Foreground" Value="{DynamicResource Text}"/>
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding Enabled}" Value="False">
+                                                                        <Setter Property="Opacity" Value="0.45"/>
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding IsCurrent}" Value="True">
+                                                                        <Setter Property="Foreground" Value="{DynamicResource Green}"/>
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding IsEditing}" Value="True">
+                                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                    </TextBlock>
+                                                    <TextBox Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}" Margin="5,5"
+                                                             MaxLength="144" LostFocus="Edit_LostFocus" KeyDown="Edit_KeyDown"
+                                                             IsVisibleChanged="Edit_VisibleChanged">
+                                                        <TextBox.Style>
+                                                            <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding IsEditing}" Value="True">
+                                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBox.Style>
+                                                    </TextBox>
+                                                </Grid>
+                                            </Border>
+
+                                            <!-- edit -->
+                                            <Border Grid.Column="3" Background="{DynamicResource Card}">
+                                                <ToggleButton Style="{StaticResource EditToggle}" Focusable="False"
+                                                              IsChecked="{Binding IsEditing, Mode=TwoWay}" Click="EditToggle_Click" ToolTip="Edit"/>
+                                            </Border>
+
+                                            <!-- text style -->
+                                            <Border Grid.Column="4" Background="{DynamicResource Field}" Padding="7,6">
+                                                <ComboBox ItemsSource="{x:Static local:StatusStyles.Names}"
+                                                          SelectedIndex="{Binding StyleIndex, Mode=TwoWay}"
+                                                          ToolTip="Text style for this message"/>
+                                            </Border>
+
+                                            <!-- favorite -->
+                                            <Border Grid.Column="5" Background="{DynamicResource CardHi}" CornerRadius="0,8,8,0">
+                                                <ToggleButton Style="{StaticResource HeartToggle}" Focusable="False"
+                                                              IsChecked="{Binding Favorite, Mode=TwoWay}" Click="RowChanged_Click"
+                                                              ToolTip="Favorite"/>
+                                            </Border>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                    <TextBlock x:Name="EmptyHint" Grid.Row="1" Style="{StaticResource MutedText}" TextAlignment="Center"
+                               HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed"
+                               Text="No statuses yet. Type one below and press Create."/>
+
+                    <!-- create bar -->
+                    <Border Grid.Row="2" Margin="0,10,0,0" Padding="10" CornerRadius="10" Background="{DynamicResource Card}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid>
+                                <TextBox x:Name="StatusEdit" Height="40" MaxLength="144" Padding="10,0,64,0"
+                                         TextChanged="StatusEdit_TextChanged" KeyDown="StatusEdit_KeyDown"/>
+                                <TextBlock x:Name="Placeholder" Text="Create here a new status" IsHitTestVisible="False"
+                                           Foreground="{DynamicResource Muted}" Margin="14,0,0,0" VerticalAlignment="Center"/>
+                                <TextBlock x:Name="CreateCount" Text="0/144" IsHitTestVisible="False" FontSize="12"
+                                           Foreground="{DynamicResource Muted}" HorizontalAlignment="Right" VerticalAlignment="Center"
+                                           Margin="0,0,12,0"/>
+                            </Grid>
+                            <Button Grid.Column="1" Style="{StaticResource Primary}" Content="Create" Height="40" Padding="24,0"
+                                    Margin="10,0,0,0" Click="Add_Click"/>
+                        </Grid>
+                    </Border>
+                </Grid>
+
+                <!-- ================= CHAT PAGE ================= -->
+                <ScrollViewer x:Name="PageChat" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Visibility="Collapsed">
+                    <StackPanel Margin="0,0,10,0">
+                        <Border Style="{StaticResource CardBox}">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource CardTitle}" Text="Live chat message"/>
+                                <TextBlock Style="{StaticResource MutedText}" Margin="0,2,0,0"
+                                           Text="Type something to say in game. Your specs are hidden and only your message shows for the display time set in Settings > Chatting options."/>
+                                <TextBox x:Name="ChatEdit" Margin="0,12,0,0" MaxLength="144" KeyDown="ChatEdit_KeyDown"/>
+                                <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                                    <Button Style="{StaticResource Primary}" Padding="22,9" Content="Send chat message" Click="SendChat_Click"/>
+                                    <Button Padding="22,9" Content="Stop and show specs" Click="StopChat_Click"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+
+                <!-- ================= SETTINGS PAGE ================= -->
+                <Grid x:Name="PageSettings" Margin="0,0,10,0" Visibility="Collapsed">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <DockPanel Margin="0,0,0,12">
+                        <Button DockPanel.Dock="Right" Content="Collapse all" Margin="0" Padding="12,4" Click="CollapseAll_Click"/>
+                        <Button DockPanel.Dock="Right" Content="Expand all" Margin="0,0,8,0" Padding="12,4" Click="ExpandAll_Click"/>
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource CardTitle}" Text="Settings"/>
+                            <TextBlock Style="{StaticResource MutedText}" Margin="0,2,0,0"
+                                       Text="Click a section to open it. Changes apply live. A red outline means an invalid value."/>
+                        </StackPanel>
+                    </DockPanel>
+
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                        <StackPanel x:Name="SettingsStack" Margin="0,0,8,0">
+
+                            <!-- ===== Status options ===== -->
+                            <Expander Style="{StaticResource Section}" Header="Status options">
+                                <StackPanel>
+                                    <DockPanel Margin="0,10,0,0">
+                                        <ToggleButton DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="{Binding ShowStatus}"/>
+                                        <TextBlock Style="{StaticResource RowLabel}" Text="Show the status line"/>
+                                    </DockPanel>
+                                    <DockPanel Margin="0,12,0,0">
+                                        <ComboBox DockPanel.Dock="Right" Width="180" SelectedIndex="{Binding StatusMode}"
+                                                  SelectionChanged="StatusMode_Changed">
+                                            <ComboBoxItem Content="In order"/>
+                                            <ComboBoxItem Content="Random"/>
+                                            <ComboBoxItem Content="Favorites only"/>
+                                        </ComboBox>
+                                        <StackPanel>
+                                            <TextBlock Style="{StaticResource RowLabel}" Text="Rotation order"/>
+                                            <TextBlock Style="{StaticResource Hint}" Text="Favorites only falls back to everything if you have no hearts yet."/>
+                                        </StackPanel>
+                                    </DockPanel>
+                                    <DockPanel Margin="0,14,0,0">
+                                        <TextBlock DockPanel.Dock="Right" Width="56" TextAlignment="Right" VerticalAlignment="Center" FontWeight="Bold"
+                                                   Foreground="{DynamicResource Lilac}"
+                                                   Text="{Binding Value, ElementName=sld_MessageDelay, StringFormat={}{0:0.0}s}"/>
+                                        <StackPanel DockPanel.Dock="Left" Width="230">
+                                            <TextBlock Style="{StaticResource RowLabel}" Text="Rotation speed"/>
+                                            <TextBlock Style="{StaticResource Hint}" Text="How often the status changes. VRChat works best at 1.5s or slower."/>
+                                        </StackPanel>
+                                        <Slider x:Name="sld_MessageDelay" Minimum="1.5" Maximum="30" TickFrequency="0.5" SmallChange="0.5" LargeChange="0.5"
+                                                Value="{Binding MessageDelay, Mode=TwoWay}"/>
+                                    </DockPanel>
+                                    <DockPanel Margin="0,12,0,0">
+                                        <TextBox DockPanel.Dock="Right" Width="160" MaxLength="20"
+                                                 Text="{Binding StatusPrefix, UpdateSourceTrigger=PropertyChanged}"/>
+                                        <TextBlock Style="{StaticResource RowLabel}" Text="Text before every status"/>
+                                    </DockPanel>
+                                    <DockPanel Margin="0,10,0,0">
+                                        <TextBox DockPanel.Dock="Right" Width="160" MaxLength="20"
+                                                 Text="{Binding StatusSuffix, UpdateSourceTrigger=PropertyChanged}"/>
+                                        <TextBlock Style="{StaticResource RowLabel}" Text="Text after every status"/>
+                                    </DockPanel>
+                                </StackPanel>
+                            </Expander>
+
+                            <!-- ===== Component stats ===== -->
+                            <Expander Style="{StaticResource Section}" Header="Component stats options">
+                                <StackPanel>
+                                    <TextBlock Style="{StaticResource Hint}" Margin="0,10,0,0"
+                                               Text="Component models and capacities are detected from this PC. CPU and RAM usage refresh once per second. FPS isn't reported because Windows can't provide a reliable system-wide value."/>
+
+                                    <DockPanel Margin="0,12,0,0">
+                                        <TextBox DockPanel.Dock="Right" Width="70" MaxLength="6"
+                                                 Text="{Binding StatSeparator, UpdateSourceTrigger=PropertyChanged}"/>
+                                        <TextBlock Style="{StaticResource RowLabel}" Text="Separator between name and value"/>
+                                    </DockPanel>
+
+                                    <!-- CPU -->
+                                    <Border Style="{StaticResource SubCard}">
+                                        <StackPanel>
+                                            <DockPanel>
+                                                <ToggleButton DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="{Binding ShowCpu}"/>
+                                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="0,0,16,0">
+                                                    <TextBlock Style="{StaticResource FieldLabel}" Text="Label"/>
+                                                    <TextBox Width="120" MaxLength="24" Text="{Binding TagCpu, UpdateSourceTrigger=PropertyChanged, ValidatesOnExceptions=True}"/>
+                                                </StackPanel>
+                                                <TextBlock Style="{StaticResource SubTitle}" Text="CPU"/>
+                                            </DockPanel>
+                                            <WrapPanel Margin="0,6,0,0">
+                                                <StackPanel Orientation="Horizontal" Margin="0,6,18,0" VerticalAlignment="Center">
+                                                    <TextBlock Style="{StaticResource FieldLabel}" Text="Detected"/>
+                                                    <TextBlock x:Name="CpuDetectedText" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                                                </StackPanel>
+                                                <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                                                    <TextBlock Style="{StaticResource FieldLabel}" Text="Show name"/>
+                                                    <ToggleButton Style="{StaticResource Switch}" IsChecked="{Binding ShowCpuName}"/>
+                                                </StackPanel>
+                                            </WrapPanel>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <!-- RAM -->
+                                    <Border Style="{StaticResource SubCard}">
+                                        <StackPanel>
+                                            <DockPanel>
+                                                <ToggleButton DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="{Binding ShowRam}"/>
+                                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="0,0,16,0">
+                                                    <TextBlock Style="{StaticResource FieldLabel}" Text="Label"/>
+                                                    <TextBox Width="120" MaxLength="24" Text="{Binding TagRam, UpdateSourceTrigger=PropertyChanged, ValidatesOnExceptions=True}"/>
+                                                </StackPanel>
+                                                <TextBlock Style="{StaticResource SubTitle}" Text="RAM"/>
+                                            </DockPanel>
+                                            <WrapPanel Margin="0,6,0,0">
+                                                <StackPanel Orientation="Horizontal" Margin="0,6,18,0" VerticalAlignment="Center">
+                                                    <TextBlock Style="{StaticResource FieldLabel}" Text="Detected"/>
+                                                    <TextBlock x:Name="RamDetectedText" VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                                <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                                                    <TextBlock Style="{StaticResource FieldLabel}" Text="Show %"/>
+                                                    <ToggleButton Style="{StaticResource Switch}" IsChecked="{Binding ShowRamPercent}"/>
+                                                </StackPanel>
+                                            </WrapPanel>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <!-- GPU -->
+                                    <Border Style="{StaticResource SubCard}">
+                                        <StackPanel>
+                                            <DockPanel>
+                                                <ToggleButton DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="{Binding ShowGpu}"/>
+                                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="0,0,16,0">
+                                                    <TextBlock Style="{StaticResource FieldLabel}" Text="Label"/>
+                                                    <TextBox Width="120" MaxLength="24" Text="{Binding TagGpu, UpdateSourceTrigger=PropertyChanged, ValidatesOnExceptions=True}"/>
+                                                </StackPanel>
+                                                <TextBlock Style="{StaticResource SubTitle}" Text="GPU"/>
+                                            </DockPanel>
+                                            <TextBlock x:Name="GpuDetectedText" Margin="0,12,0,0" TextWrapping="Wrap"/>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <!-- VRAM -->
+                                    <Border Style="{StaticResource SubCard}">
+                                        <StackPanel>
+                                            <DockPanel>
+                                                <ToggleButton DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="{Binding ShowVram}"/>
+                                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="0,0,16,0">
+                                                    <TextBlock Style="{StaticResource FieldLabel}" Text="Label"/>
+                                                    <TextBox Width="120" MaxLength="24" Text="{Binding TagVram, UpdateSourceTrigger=PropertyChanged, ValidatesOnExceptions=True}"/>
+                                                </StackPanel>
+                                                <TextBlock Style="{StaticResource SubTitle}" Text="VRAM"/>
+                                            </DockPanel>
+                                            <WrapPanel Margin="0,6,0,0">
+                                                <StackPanel Orientation="Horizontal" Margin="0,6,18,0" VerticalAlignment="Center">
+                                                    <TextBlock Style="{StaticResource FieldLabel}" Text="Detected"/>
+                                                    <TextBlock x:Name="VramDetectedText" VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                            </WrapPanel>
+                                        </StackPanel>
+                                    </Border>
+                                </StackPanel>
+                            </Expander>
+
+                            <!-- ===== Time ===== -->
+                            <Expander Style="{StaticResource Section}" Header="Time options">
+                                <StackPanel>
+                                    <DockPanel Margin="0,10,0,0">
+                                        <ToggleButton DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="{Binding ShowTime}"/>
+                                        <TextBlock Style="{StaticResource RowLabel}" Text="Show time"/>
+                                    </DockPanel>
+                                    <DockPanel Margin="0,12,0,0">
+                                        <ToggleButton DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="{Binding ShowDate}"/>
+                                        <TextBlock Style="{StaticResource RowLabel}" Text="Show date"/>
+                                    </DockPanel>
+                                    <DockPanel Margin="0,12,0,0">
+                                        <ToggleButton DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="{Binding H24}"/>
+                                        <TextBlock Style="{StaticResource RowLabel}" Text="24-hour clock"/>
+                                    </DockPanel>
+                                    <DockPanel Margin="0,12,0,0">
+                                        <ToggleButton DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="{Binding ShowSeconds}"/>
+                                        <TextBlock Style="{StaticResource RowLabel}" Text="Show seconds"/>
+                                    </DockPanel>
+                                    <DockPanel Margin="0,12,0,0">
+                                        <ComboBox DockPanel.Dock="Right" Width="180" SelectedIndex="{Binding DateStyle}">
+                                            <ComboBoxItem Content="Mon, Jan 5"/>
+                                            <ComboBoxItem Content="1/5 (month/day)"/>
+                                            <ComboBoxItem Content="5/1 (day/month)"/>
+                                            <ComboBoxItem Content="Jan 5, 2026"/>
+                                            <ComboBoxItem Content="2026-01-05"/>
+                                        </ComboBox>
+                                        <TextBlock Style="{StaticResource RowLabel}" Text="Date format"/>
+                                    </DockPanel>
+                                    <DockPanel Margin="0,12,0,0">
+                                        <TextBox DockPanel.Dock="Right" Width="150" Text="{Binding TagTime, UpdateSourceTrigger=PropertyChanged}"/>
+                                        <TextBlock Style="{StaticResource RowLabel}" Text="Time label"/>
+                                    </DockPanel>
+                                    <DockPanel Margin="0,10,0,0">
+                                        <TextBox DockPanel.Dock="Right" Width="150" Text="{Binding TagDate, UpdateSourceTrigger=PropertyChanged}"/>
+                                        <TextBlock Style="{StaticResource RowLabel}" Text="Date label"/>
+                                    </DockPanel>
+                                </StackPanel>
+                            </Expander>
+
+                            <!-- ===== Weather ===== -->
+                            <Expander Style="{StaticResource Section}" Header="Weather options">
+                                <StackPanel>
+                                    <DockPanel Margin="0,10,0,0">
+                                        <ToggleButton DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="{Binding ShowWeather}"/>
+                                        <StackPanel>
+                                            <TextBlock Style="{StaticResource RowLabel}" Text="Show weather"/>
+                                            <TextBlock Style="{StaticResource Hint}" Text="Current weather from wttr.in. Blank city = auto-detect."/>
+                                        </StackPanel>
+                                    </DockPanel>
+                                    <DockPanel Margin="0,12,0,0">
+                                        <TextBox DockPanel.Dock="Right" Width="200" Text="{Binding City, UpdateSourceTrigger=PropertyChanged}"/>
+                                        <TextBlock Style="{StaticResource RowLabel}" Text="City"/>
+                                    </DockPanel>
+                                    <DockPanel Margin="0,12,0,0">
+                                        <ToggleButton DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="{Binding Fahrenheit}"/>
+                                        <TextBlock Style="{StaticResource RowLabel}" Text="Use Fahrenheit"/>
+                                    </DockPanel>
+                                    <DockPanel Margin="0,12,0,0">
+                                        <TextBox DockPanel.Dock="Right" Width="70" Text="{Binding WeatherMinutes, UpdateSourceTrigger=PropertyChanged, ValidatesOnExceptions=True}"/>
+                                        <TextBlock Style="{StaticResource RowLabel}" Text="Refresh every (minutes)"/>
+                                    </DockPanel>
+                                    <DockPanel Margin="0,10,0,0">
+                                        <TextBox DockPanel.Dock="Right" Width="150" MaxLength="24" Text="{Binding TagWeather, UpdateSourceTrigger=PropertyChanged}"/>
+                                        <TextBlock Style="{StaticResource RowLabel}" Text="Label"/>
+                                    </DockPanel>
+                                    <TextBlock x:Name="WeatherStatusText" Margin="0,12,0,0" FontSize="12.5" Foreground="{DynamicResource Lilac}"/>
+                                </StackPanel>
+                            </Expander>
+
+                            <!-- ===== Media ===== -->
+                            <Expander Style="{StaticResource Section}" Header="Now playing (Spotify, YouTube, ...) options">
+                                <StackPanel>
+                                    <DockPanel Margin="0,10,0,0">
+                                        <ToggleButton DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="{Binding ShowMedia}"/>
+                                        <StackPanel>
+                                            <TextBlock Style="{StaticResource RowLabel}" Text="Show now playing"/>
+                                            <TextBlock Style="{StaticResource Hint}" Text="Reads what Windows says is playing, so paused media is ignored."/>
+                                        </StackPanel>
+                                    </DockPanel>
+                                    <DockPanel Margin="0,12,0,0">
+                                        <ToggleButton DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="{Binding MediaSpotify}"/>
+                                        <TextBlock Style="{StaticResource RowLabel}" Text="Spotify"/>
+                                    </DockPanel>
+                                    <DockPanel Margin="0,12,0,0">
+                                        <ToggleButton DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="{Binding MediaYoutube}"/>
+                                        <TextBlock Style="{StaticResource RowLabel}" Text="YouTube"/>
+                                    </DockPanel>
+                                    <DockPanel Margin="0,12,0,0">
+                                        <ToggleButton DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="{Binding MediaOther}"/>
+                                        <TextBlock Style="{StaticResource RowLabel}" Text="Other players"/>
+                                    </DockPanel>
+                                    <DockPanel Margin="0,12,0,0">
+                                        <ToggleButton DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="{Binding ShowMediaApp}"/>
+                                        <StackPanel>
+                                            <TextBlock Style="{StaticResource RowLabel}" Text="Show player name"/>
+                                            <TextBlock Style="{StaticResource Hint}" Text="Adds (Spotify) after the song."/>
+                                        </StackPanel>
+                                    </DockPanel>
+                                    <DockPanel Margin="0,12,0,0">
+                                        <TextBox DockPanel.Dock="Right" Width="70" Text="{Binding MediaMax, UpdateSourceTrigger=PropertyChanged, ValidatesOnExceptions=True}"/>
+                                        <TextBlock Style="{StaticResource RowLabel}" Text="Max song length (10-100)"/>
+                                    </DockPanel>
+                                    <DockPanel Margin="0,10,0,0">
+                                        <TextBox DockPanel.Dock="Right" Width="150" MaxLength="24" Text="{Binding TagMusic, UpdateSourceTrigger=PropertyChanged}"/>
+                                        <TextBlock Style="{StaticResource RowLabel}" Text="Label"/>
+                                    </DockPanel>
+                                    <TextBlock x:Name="MediaStatusText" Margin="0,12,0,0" FontSize="12.5" Foreground="{DynamicResource Lilac}"/>
+                                </StackPanel>
+                            </Expander>
+
+                            <!-- ===== App ===== -->
+                            <Expander Style="{StaticResource Section}" Header="App options">
+                                <StackPanel>
+                                    <DockPanel Margin="0,10,0,0">
+                                        <ToggleButton DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="{Binding ShowApp}"/>
+                                        <StackPanel>
+                                            <TextBlock Style="{StaticResource RowLabel}" Text="Show the app you're using"/>
+                                            <TextBlock Style="{StaticResource Hint}" Text="Shows the program in front, like Chrome or Discord."/>
+                                        </StackPanel>
+                                    </DockPanel>
+                                    <DockPanel Margin="0,12,0,0">
+                                        <TextBox DockPanel.Dock="Right" Width="150" MaxLength="24" Text="{Binding TagApp, UpdateSourceTrigger=PropertyChanged}"/>
+                                        <TextBlock Style="{StaticResource RowLabel}" Text="Label"/>
+                                    </DockPanel>
+                                </StackPanel>
+                            </Expander>
+
+                            <!-- ===== Battery / uptime ===== -->
+                            <Expander Style="{StaticResource Section}" Header="Battery &amp; uptime options">
+                                <StackPanel>
+                                    <DockPanel Margin="0,10,0,0">
+                                        <ToggleButton DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="{Binding ShowBattery}"/>
+                                        <TextBlock Style="{StaticResource RowLabel}" Text="Show battery"/>
+                                    </DockPanel>
+                                    <DockPanel Margin="0,10,0,0">
+                                        <TextBox DockPanel.Dock="Right" Width="150" MaxLength="24" Text="{Binding TagBattery, UpdateSourceTrigger=PropertyChanged}"/>
+                                        <TextBlock Style="{StaticResource RowLabel}" Text="Battery label"/>
+                                    </DockPanel>
+                                    <DockPanel Margin="0,14,0,0">
+                                        <ToggleButton DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="{Binding ShowUptime}"/>
+                                        <TextBlock Style="{StaticResource RowLabel}" Text="Show PC uptime"/>
+                                    </DockPanel>
+                                    <DockPanel Margin="0,10,0,0">
+                                        <TextBox DockPanel.Dock="Right" Width="150" MaxLength="24" Text="{Binding TagUptime, UpdateSourceTrigger=PropertyChanged}"/>
+                                        <TextBlock Style="{StaticResource RowLabel}" Text="Uptime label"/>
+                                    </DockPanel>
+                                </StackPanel>
+                            </Expander>
+
+                            <!-- ===== Chatting ===== -->
+                            <Expander Style="{StaticResource Section}" Header="Chatting options">
+                                <StackPanel>
+                                    <DockPanel Margin="0,14,0,0">
+                                        <TextBlock DockPanel.Dock="Right" Width="56" TextAlignment="Right" VerticalAlignment="Center" FontWeight="Bold"
+                                                   Foreground="{DynamicResource Lilac}"
+                                                   Text="{Binding Value, ElementName=sld_ChatDuration, StringFormat={}{0:0.0}s}"/>
+                                        <StackPanel DockPanel.Dock="Left" Width="230">
+                                            <TextBlock Style="{StaticResource RowLabel}" Text="Chat display time"/>
+                                            <TextBlock Style="{StaticResource Hint}" Text="How long a chat message stays before the specs come back."/>
+                                        </StackPanel>
+                                        <Slider x:Name="sld_ChatDuration" Minimum="1" Maximum="15" TickFrequency="0.5" SmallChange="0.5" LargeChange="0.5"
+                                                Value="{Binding ChatDuration, Mode=TwoWay}"/>
+                                    </DockPanel>
+                                </StackPanel>
+                            </Expander>
+
+                            <!-- ===== Chatbox behavior ===== -->
+                            <Expander Style="{StaticResource Section}" Header="Chatbox behavior">
+                                <StackPanel>
+                                    <DockPanel Margin="0,10,0,0">
+                                        <ToggleButton DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="{Binding Immediate}"/>
+                                        <TextBlock Style="{StaticResource RowLabel}" Text="Send instantly (skip the keyboard popup)"/>
+                                    </DockPanel>
+                                    <DockPanel Margin="0,12,0,0">
+                                        <ToggleButton DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="{Binding Sound}"/>
+                                        <TextBlock Style="{StaticResource RowLabel}" Text="Play the notification sound"/>
+                                    </DockPanel>
+                                    <DockPanel Margin="0,12,0,0">
+                                        <ToggleButton DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="{Binding TrimToLimit}"/>
+                                        <StackPanel>
+                                            <TextBlock Style="{StaticResource RowLabel}" Text="Trim to 144 characters"/>
+                                            <TextBlock Style="{StaticResource Hint}" Text="Cuts the end off instead of letting VRChat do it."/>
+                                        </StackPanel>
+                                    </DockPanel>
+                                    <DockPanel Margin="0,14,0,0">
+                                        <TextBlock DockPanel.Dock="Right" Width="56" TextAlignment="Right" VerticalAlignment="Center" FontWeight="Bold"
+                                                   Foreground="{DynamicResource Lilac}"
+                                                   Text="{Binding Value, ElementName=sld_MinSend, StringFormat={}{0:0.0}s}"/>
+                                        <StackPanel DockPanel.Dock="Left" Width="230">
+                                            <TextBlock Style="{StaticResource RowLabel}" Text="Minimum time between sends"/>
+                                            <TextBlock Style="{StaticResource Hint}" Text="0 = no limit. Try 1.5s if VRChat drops updates."/>
+                                        </StackPanel>
+                                        <Slider x:Name="sld_MinSend" Minimum="0" Maximum="5" TickFrequency="0.1" SmallChange="0.1" LargeChange="0.1"
+                                                Value="{Binding MinSendInterval, Mode=TwoWay}"/>
+                                    </DockPanel>
+                                </StackPanel>
+                            </Expander>
+
+                            <!-- ===== Connection ===== -->
+                            <Expander Style="{StaticResource Section}" Header="Connection (OSC)">
+                                <StackPanel>
+                                    <TextBlock Style="{StaticResource Hint}" Margin="0,10,0,0" Text="VRChat listens on 127.0.0.1 port 9000 by default."/>
+                                    <DockPanel Margin="0,12,0,0">
+                                        <TextBox DockPanel.Dock="Right" Width="150" Text="{Binding Ip, UpdateSourceTrigger=PropertyChanged, ValidatesOnExceptions=True}"/>
+                                        <TextBlock Style="{StaticResource RowLabel}" Text="IP address"/>
+                                    </DockPanel>
+                                    <DockPanel Margin="0,10,0,0">
+                                        <TextBox DockPanel.Dock="Right" Width="150" Text="{Binding Port, UpdateSourceTrigger=PropertyChanged, ValidatesOnExceptions=True}"/>
+                                        <TextBlock Style="{StaticResource RowLabel}" Text="Port"/>
+                                    </DockPanel>
+                                    <Button Style="{StaticResource Primary}" Content="Apply connection" Margin="0,14,0,0"
+                                            HorizontalAlignment="Left" Click="Apply_Click"/>
+                                </StackPanel>
+                            </Expander>
+
+                            <!-- ===== Appearance ===== -->
+                            <Expander Style="{StaticResource Section}" Header="Appearance &amp; window">
+                                <StackPanel>
+                                    <DockPanel Margin="0,10,0,0">
+                                        <ComboBox DockPanel.Dock="Right" Width="180" SelectedIndex="{Binding ThemeIndex}"
+                                                  SelectionChanged="Theme_Changed">
+                                            <ComboBoxItem Content="Midnight"/>
+                                            <ComboBoxItem Content="Violet"/>
+                                            <ComboBoxItem Content="Rose"/>
+                                            <ComboBoxItem Content="Mint"/>
+                                        </ComboBox>
+                                        <TextBlock Style="{StaticResource RowLabel}" Text="Color theme"/>
+                                    </DockPanel>
+                                    <DockPanel Margin="0,12,0,0">
+                                        <TextBlock DockPanel.Dock="Right" Width="52" TextAlignment="Right" VerticalAlignment="Center"
+                                                   Foreground="{DynamicResource Muted}"
+                                                   Text="{Binding SurfaceTransparency, StringFormat={}{0:P0}}"/>
+                                        <StackPanel>
+                                            <TextBlock Style="{StaticResource RowLabel}" Text="Surface transparency"/>
+                                            <TextBlock Style="{StaticResource Hint}" Text="Makes panels see-through over the background."/>
+                                        </StackPanel>
+                                    </DockPanel>
+                                    <Slider Minimum="0" Maximum="0.75" TickFrequency="0.05" SmallChange="0.01"
+                                            Value="{Binding SurfaceTransparency, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                            ValueChanged="SurfaceTransparency_Changed"/>
+                                    <DockPanel Margin="0,12,0,0">
+                                        <Button DockPanel.Dock="Right" Content="Apply" Padding="10,4" Margin="6,0,0,0"
+                                                Click="ApplyTextColor_Click"/>
+                                        <TextBox x:Name="TextColorBox" Width="100" HorizontalAlignment="Right"
+                                                 Text="#FFFFFF" MaxLength="7" CharacterCasing="Upper"/>
+                                        <TextBlock Style="{StaticResource RowLabel}" Text="Text color"/>
+                                    </DockPanel>
+                                    <TextBlock Style="{StaticResource Hint}" Margin="0,4,0,0"
+                                               Text="Enter a hex color such as #FFFFFF."/>
+                                    <DockPanel Margin="0,12,0,0">
+                                        <ComboBox DockPanel.Dock="Right" Width="180" SelectedIndex="{Binding BackgroundMode, Mode=TwoWay}"
+                                                  SelectionChanged="BackgroundMode_Changed">
+                                            <ComboBoxItem Content="Theme background"/>
+                                            <ComboBoxItem Content="Color shifter"/>
+                                            <ComboBoxItem Content="Picture"/>
+                                        </ComboBox>
+                                        <TextBlock Style="{StaticResource RowLabel}" Text="Custom background"/>
+                                    </DockPanel>
+                                    <StackPanel x:Name="SolidColorSettings" Visibility="Collapsed" Margin="0,8,0,0">
+                                        <DockPanel Margin="0,4,0,0">
+                                            <Border x:Name="BackgroundColorPreview" DockPanel.Dock="Right" Width="40" Height="24"
+                                                    BorderBrush="{DynamicResource Edge}" BorderThickness="1" CornerRadius="5"/>
+                                            <TextBlock x:Name="BackgroundColorHex" Style="{StaticResource MutedText}"
+                                                       VerticalAlignment="Center"/>
+                                        </DockPanel>
+                                        <DockPanel Margin="0,8,0,0">
+                                            <TextBlock DockPanel.Dock="Left" Width="100" Style="{StaticResource FieldLabel}" Text="Hue"/>
+                                            <Slider Minimum="0" Maximum="360" Value="{Binding BackgroundHue}"
+                                                    ValueChanged="BackgroundColor_Changed"/>
+                                        </DockPanel>
+                                        <DockPanel Margin="0,6,0,0">
+                                            <TextBlock DockPanel.Dock="Left" Width="100" Style="{StaticResource FieldLabel}" Text="Saturation"/>
+                                            <Slider Minimum="0" Maximum="1" Value="{Binding BackgroundSaturation}"
+                                                    ValueChanged="BackgroundColor_Changed"/>
+                                        </DockPanel>
+                                        <DockPanel Margin="0,6,0,0">
+                                            <TextBlock DockPanel.Dock="Left" Width="100" Style="{StaticResource FieldLabel}" Text="Brightness"/>
+                                            <Slider Minimum="0" Maximum="1" Value="{Binding BackgroundBrightness}"
+                                                    ValueChanged="BackgroundColor_Changed"/>
+                                        </DockPanel>
+                                    </StackPanel>
+                                    <StackPanel x:Name="PictureSettings" Visibility="Collapsed" Margin="0,8,0,0">
+                                        <Button Content="Choose picture..." HorizontalAlignment="Left"
+                                                Click="ChooseBackground_Click"/>
+                                        <TextBlock x:Name="BackgroundImageName" Style="{StaticResource Hint}"
+                                                   Margin="0,6,0,0" TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                    <DockPanel Margin="0,12,0,0">
+                                        <ToggleButton DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="{Binding Topmost}"/>
+                                        <TextBlock Style="{StaticResource RowLabel}" Text="Always on top"/>
+                                    </DockPanel>
+                                    <DockPanel Margin="0,12,0,0">
+                                        <ToggleButton DockPanel.Dock="Right" Style="{StaticResource Switch}"
+                                                      IsChecked="{Binding CustomWindowControls}"
+                                                      Checked="CustomWindowControls_Changed"
+                                                      Unchecked="CustomWindowControls_Changed"/>
+                                        <StackPanel>
+                                            <TextBlock Style="{StaticResource RowLabel}" Text="Use in-app window controls"/>
+                                            <TextBlock Style="{StaticResource Hint}"
+                                                       Text="Replaces the Windows title bar buttons. Turn off to use the standard title bar."/>
+                                        </StackPanel>
+                                    </DockPanel>
+                                    <DockPanel Margin="0,12,0,0">
+                                        <ToggleButton DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="{Binding ShowSplash}"/>
+                                        <StackPanel>
+                                            <TextBlock Style="{StaticResource RowLabel}" Text="Show the startup screen"/>
+                                            <TextBlock Style="{StaticResource Hint}" Text="Takes effect next time you open the app."/>
+                                        </StackPanel>
+                                    </DockPanel>
+                                </StackPanel>
+                            </Expander>
+
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
+            </Grid>
+
+            <!-- ===== preview side panel ===== -->
+            <Border Grid.Column="1" Background="{DynamicResource Panel}">
+                <Grid Margin="14,12,14,10">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <Grid Grid.Row="0">
+                        <TextBlock Text="Preview" FontSize="18" FontWeight="Bold" HorizontalAlignment="Center"/>
+                        <TextBlock x:Name="CountText" HorizontalAlignment="Right" VerticalAlignment="Bottom" FontSize="12.5" Foreground="{DynamicResource Muted}"/>
+                    </Grid>
+
+                    <Border Grid.Row="1" Margin="0,12,0,0" Height="270" CornerRadius="20" Background="{DynamicResource PrevBg}"
+                            BorderBrush="{DynamicResource Edge}" BorderThickness="1">
+                        <TextBlock x:Name="PreviewText" TextWrapping="Wrap" TextAlignment="Center"
+                                   VerticalAlignment="Center" Margin="12" FontSize="14.5"/>
+                    </Border>
+
+                    <TextBlock x:Name="OverWarning" Grid.Row="2" Margin="0,8,0,0" TextWrapping="Wrap" TextAlignment="Center"
+                               FontSize="12.5" Foreground="{DynamicResource Bad}" Visibility="Collapsed"
+                               Text="Over 144 characters. VRChat will cut off the end, so turn off a line or shorten a name."/>
+
+                    <Border Grid.Row="3" Margin="0,12,0,0" Background="{DynamicResource Card}" CornerRadius="14" Padding="8,5">
+                        <TextBlock x:Name="ConnText" HorizontalAlignment="Center" FontSize="12.5" Foreground="{DynamicResource Lilac}"/>
+                    </Border>
+
+                    <StackPanel Grid.Row="5" VerticalAlignment="Bottom">
+                        <Button Style="{StaticResource Primary}" Margin="0,0,0,10" Padding="0,10" Content="Send now" Click="SendNow_Click"/>
+                        <Button Margin="0,0,0,12" Padding="0,10" Content="Clear chatbox" Click="Clear_Click"/>
+                        <TextBlock Text="Panda Chatbox  V3.1 (C#)" HorizontalAlignment="Center" FontSize="12.5" Foreground="{DynamicResource Off}"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</Window>
