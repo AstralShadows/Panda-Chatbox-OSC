@@ -196,7 +196,7 @@ public sealed class Engine
 
         bool send = _force;
         _force = false;
-        if (now - _lastHw >= 1.0)
+        if (now - _lastHw >= Cfg.HardwareUpdateInterval)
         {
             SampleHardware();
             _lastHw = now;
@@ -284,8 +284,8 @@ public sealed class Engine
 
     // ---------- build the chatbox text ----------
     static string Tagged(string tag, string body) => tag.Length == 0 ? body : tag + " " + body;
-    static string F1(double v) => v.ToString("0.0", CultureInfo.InvariantCulture);
-    static string G(double v) => v.ToString("G6", CultureInfo.InvariantCulture);
+    static string UsedGb(double v) => v.ToString("0.##", CultureInfo.InvariantCulture);
+    static string WholeGb(double v) => Math.Ceiling(v).ToString("0", CultureInfo.InvariantCulture);
 
     public string Compose()
     {
@@ -305,11 +305,16 @@ public sealed class Engine
         if (Cfg.ShowRam)
         {
             string pct = Cfg.ShowRamPercent ? $" ({(int)(_ram / _hardware.TotalRamGb * 100)}%)" : "";
-            lines.Add(Tagged(Cfg.TagRam, $"{F1(_ram)}GB / {G(_hardware.TotalRamGb)}GB{pct}"));
+            lines.Add(Tagged(Cfg.TagRam, $"{UsedGb(_ram)}/{WholeGb(_hardware.TotalRamGb)}GB{pct}"));
         }
         if (Cfg.ShowGpu) lines.Add(Tagged(Cfg.TagGpu, _hardware.GpuName));
         if (Cfg.ShowVram)
-            lines.Add(Tagged(Cfg.TagVram, $"{G(_hardware.TotalVramGb)}GB dedicated"));
+        {
+            string usage = _hardware.UsedVramGb is double used
+                ? $"{UsedGb(used)}/{WholeGb(_hardware.TotalVramGb)}GB"
+                : $"Usage unavailable / {WholeGb(_hardware.TotalVramGb)}GB";
+            lines.Add(Tagged(Cfg.TagVram, usage));
+        }
         return string.Join("\n", lines);
     }
 

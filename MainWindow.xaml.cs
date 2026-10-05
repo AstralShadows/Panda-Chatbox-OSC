@@ -48,8 +48,7 @@ public partial class MainWindow : Window
     }
 
     static List<StatusItem> DefaultStatuses() =>
-        new[] { "i beat my boyfriend", "i love my bf", "i give my bf sloppy kisses" }
-            .Select(t => new StatusItem { Text = t }).ToList();
+        new() { new StatusItem { Text = "hello welcome to panda chatbox" } };
 
     /// <summary>Starts the engine and timers. App.xaml.cs calls this while the splash screen is showing.</summary>
     public void Begin()
@@ -164,9 +163,14 @@ public partial class MainWindow : Window
         MediaStatusText.Text = _eng.MediaStatus;
 
         CpuDetectedText.Text = _eng.Hardware.CpuName;
-        RamDetectedText.Text = $"{_eng.Hardware.TotalRamGb:0.0} GB";
+        RamDetectedText.Text = $"{_eng.Hardware.UsedRamGb:0.##}/{Math.Ceiling(_eng.Hardware.TotalRamGb):0} GB used";
         GpuDetectedText.Text = _eng.Hardware.GpuName;
-        VramDetectedText.Text = $"{_eng.Hardware.TotalVramGb:0.0} GB dedicated";
+        VramDetectedText.Text = _eng.Hardware.UsedVramGb is double usedVram
+            ? $"{usedVram:0.##}/{Math.Ceiling(_eng.Hardware.TotalVramGb):0} GB used"
+            : $"Usage unavailable / {Math.Ceiling(_eng.Hardware.TotalVramGb):0} GB";
+        VramDetectedText.ToolTip = _eng.Hardware.VramUsageError.Length == 0
+            ? "Dedicated GPU memory currently used by all apps / total capacity"
+            : _eng.Hardware.VramUsageError;
 
         int total = _eng.Messages.Count;
         int on = _eng.Messages.Count(m => m.Enabled);

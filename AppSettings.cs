@@ -64,11 +64,16 @@ public class AppSettings
     public string StatusSuffix { get; set; } = "";
 
     // ---- timing ----
-    double _messageDelay = 3.0, _chatDuration = 4.0, _minSend;
+    double _messageDelay = 3.0, _chatDuration = 4.0, _minSend, _hardwareUpdateInterval = 1.0;
     public double MessageDelay { get => _messageDelay; set { if (Bad(BadNum(value) || value < 0.1, "Too small")) return; _messageDelay = value; } }
     public double ChatDuration { get => _chatDuration; set { if (Bad(BadNum(value) || value < 0.1, "Too small")) return; _chatDuration = value; } }
     /// <summary>Minimum seconds between automatic sends (0 = no limit). Handy because VRChat throttles fast updates.</summary>
     public double MinSendInterval { get => _minSend; set { if (Bad(BadNum(value) || value > 10, "0-10")) return; _minSend = value; } }
+    public double HardwareUpdateInterval
+    {
+        get => _hardwareUpdateInterval;
+        set { if (Bad(BadNum(value) || value < 0.5 || value > 10, "0.5-10")) return; _hardwareUpdateInterval = value; }
+    }
 
     // ---- connection ----
     string _ip = "127.0.0.1";
