@@ -35,6 +35,13 @@ public class AppSettings
     public bool TrimToLimit { get; set; } = true;     // cut text at 144 characters before sending
     public bool ShowSplash { get; set; } = true;      // startup screen
     public bool SuppressUpdateNotifications { get; set; }
+    public bool OnboardingCompleted { get; set; } = true;
+    int _uiScale = 100;
+    public int UiScale
+    {
+        get => _uiScale;
+        set => _uiScale = new[] { 80, 100, 120, 140 }.Contains(value) ? value : 100;
+    }
 
     int _themeIndex;
     public int ThemeIndex { get => _themeIndex; set => _themeIndex = Math.Clamp(value, 0, ThemeManager.Names.Length - 1); }
@@ -181,6 +188,8 @@ public class StatusProfile
     public string Name { get; set; } = "";
     public string AppMatch { get; set; } = "";
     public string Collection { get; set; } = "Default";
+    int _priority;
+    public int Priority { get => _priority; set => _priority = Math.Clamp(value, -100, 100); }
 }
 
 public class ScheduledStatusProfile
@@ -189,6 +198,9 @@ public class ScheduledStatusProfile
     public string StartTime { get; set; } = "09:00";
     public string EndTime { get; set; } = "17:00";
     public string Collection { get; set; } = "Default";
+    public string Days { get; set; } = "Mon,Tue,Wed,Thu,Fri,Sat,Sun";
+    int _priority;
+    public int Priority { get => _priority; set => _priority = Math.Clamp(value, -100, 100); }
     public bool Enabled { get; set; } = true;
 }
 
@@ -223,7 +235,7 @@ public static class SettingsStore
     {
         try
         {
-            if (!File.Exists(FilePath)) return (new AppSettings(), null);
+            if (!File.Exists(FilePath)) return (new AppSettings { OnboardingCompleted = false, Send = false }, null);
             AppSettings.Loading = true;
             var sf = JsonSerializer.Deserialize<SaveFile>(File.ReadAllText(FilePath));
             var items = sf?.Items ?? sf?.Messages?.Select(m => new StatusItem { Text = m }).ToList();

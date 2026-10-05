@@ -44,6 +44,8 @@ public partial class MainWindow : Window
 
         InitializeComponent();
         DataContext = _cfg;
+        UiScaleCombo.SelectedIndex = Array.IndexOf(new[] { 80, 100, 120, 140 }, _cfg.UiScale);
+        ApplyUiScale();
         TextColorBox.Text = _cfg.TextColor;
         _pages = new UIElement[] { PageStatus, PageChat, PageIntegrations, PageSettings };
         StatusList.ItemsSource = _eng.Messages;
@@ -440,6 +442,7 @@ public partial class MainWindow : Window
         SendBadge.Text = _cfg.Send ? "Running" : "Paused";
         SendBadge.Foreground = (Brush)FindResource(_cfg.Send ? "Green" : "Muted");
         SendDot.Fill = (Brush)FindResource(_cfg.Send ? "Green" : "Off");
+        PauseButton.Content = _cfg.Send ? "Pause sending (Ctrl+Shift+P)" : "Resume sending (Ctrl+Shift+P)";
 
         WeatherStatusText.Text = _eng.WeatherStatus;
         MediaStatusText.Text = _eng.MediaStatus;
@@ -495,6 +498,17 @@ public partial class MainWindow : Window
         int n = StatusEdit.Text.Length;
         Placeholder.Visibility = n == 0 ? Visibility.Visible : Visibility.Collapsed;
         CreateCount.Text = $"{n}/{Engine.ChatboxLimit}";
+    }
+
+    void TemplateHelper_Click(object sender, RoutedEventArgs e)
+    {
+        var helper = new TemplateBuilderWindow(StatusEdit.Text) { Owner = this };
+        if (helper.ShowDialog() == true)
+        {
+            StatusEdit.Text = helper.TemplateText;
+            StatusEdit.Focus();
+            StatusEdit.CaretIndex = StatusEdit.Text.Length;
+        }
     }
 
     void Collection_TextChanged(object sender, TextChangedEventArgs e)
@@ -664,6 +678,32 @@ public partial class MainWindow : Window
     void MainWindow_KeyDown(object sender, KeyEventArgs e)
     {
         if (e.Handled) return;
+        if (Keyboard.Modifiers == ModifierKeys.Control)
+        {
+            int tabIndex = e.Key switch
+            {
+                Key.D1 or Key.NumPad1 => 0,
+                Key.D2 or Key.NumPad2 => 1,
+                Key.D3 or Key.NumPad3 => 2,
+                Key.D4 or Key.NumPad4 => 3,
+                _ => -1
+            };
+            if (tabIndex >= 0)
+            {
+                new[] { StatusTab, ChatTab, IntegrationsTab, SettingsTab }[tabIndex].IsChecked = true;
+                e.Handled = true;
+                return;
+            }
+        }
+
+        if (Keyboard.Modifiers == (ModifierKeys.Control | ModifierKeys.Shift) && e.Key == Key.P
+            && Keyboard.FocusedElement is not (TextBox or ComboBox or PasswordBox))
+        {
+            ToggleSending();
+            e.Handled = true;
+            return;
+        }
+
         if (Keyboard.FocusedElement is TextBox or ComboBox or PasswordBox) return;
 
         string hotkey = NormalizeHotkey(Keyboard.Modifiers, e.Key);
@@ -676,6 +716,51 @@ public partial class MainWindow : Window
         ApplyQuickPreset(preset);
         e.Handled = true;
     }
+
+    void Pause_Click(object sender, RoutedEventArgs e) => ToggleSending();
+
+    void ToggleSending()
+    {
+        _cfg.Send = !_cfg.Send;
+        if (_cfg.Send) _eng.Kick();
+        else _eng.SendClear();
+        SaveNow();
+        RefreshUi();
+    }
+
+    void UiScale_Changed(object sender, SelectionChangedEventArgs e)
+    {
+        if (!IsLoaded || UiScaleCombo.SelectedIndex < 0) return;
+        _cfg.UiScale = new[] { 80, 100, 120, 140 }[UiScaleCombo.SelectedIndex];
+        ApplyUiScale();
+        SaveNow();
+    }
+
+    void ApplyUiScale()
+    {
+        if (MainRoot == null) return;
+        double scale = _cfg.UiScale / 100.0;
+        MainRoot.LayoutTransform = new ScaleTransform(scale, scale);
+        Width = 1136 * scale;
+        Height = 810 * scale;
+        MinWidth = 980 * scale;
+        MinHeight = 640 * scale;
+    }
+
+    public void ShowFirstRunOnboarding()
+    {
+        var onboarding = new OnboardingWindow(_cfg, _eng.Messages) { Owner = this };
+        onboarding.ShowDialog();
+        if (_cfg.OnboardingCompleted)
+        {
+            _eng.ApplyConnection();
+            _eng.ConfigurationChanged();
+            SaveNow();
+            RefreshUi();
+        }
+    }
+
+    void OpenOnboarding_Click(object sender, RoutedEventArgs e) => ShowFirstRunOnboarding();
 
     static string NormalizeHotkey(ModifierKeys modifiers, Key key)
     {

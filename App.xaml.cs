@@ -66,7 +66,7 @@ public partial class App : Application
         splash?.Next(); await Task.Delay(splash == null ? 0 : 120); if (Stop()) return;    // 3 let the splash repaint, then build the UI
         var win = new MainWindow(cfg, saved);
         await Task.Delay(pause); if (Stop()) return;
-        splash?.Next(); win.Begin(); await Task.Delay(pause); if (Stop()) return;          // 4 start engine + OSC
+        splash?.Next(); await Task.Delay(pause); if (Stop()) return;                      // 4 prepare the main window
         splash?.Next(); await Task.Delay(pause); if (Stop()) return;                       // 5
         splash?.Next(); await Task.Delay(pause); if (Stop()) return;                       // 6
         splash?.Finish(); await Task.Delay(splash == null ? 0 : 300); if (Stop()) return;
@@ -74,6 +74,9 @@ public partial class App : Application
         MainWindow = win;
         ShutdownMode = ShutdownMode.OnMainWindowClose;
         win.Show();
+        if (!cfg.OnboardingCompleted)
+            win.ShowFirstRunOnboarding();
+        win.Begin();
         splash?.Close();
     }
 }

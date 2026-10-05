@@ -1,0 +1,62 @@
+<Window x:Class="PandaChatbox.OnboardingWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Panda Chatbox setup" Icon="favicon.ico" Width="600" Height="540"
+        MinWidth="540" MinHeight="490" WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize" Background="{DynamicResource Bg}" Foreground="{DynamicResource Text}"
+        FontFamily="Segoe UI Variable Text, Segoe UI" FontSize="14">
+    <Grid Margin="26">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <StackPanel>
+            <TextBlock x:Name="StepTitle" FontSize="23" FontWeight="Bold"/>
+            <TextBlock x:Name="StepSubtitle" Margin="0,5,0,18" Foreground="{DynamicResource Muted}" TextWrapping="Wrap"/>
+        </StackPanel>
+
+        <Grid Grid.Row="1">
+            <StackPanel x:Name="ConnectionPage">
+                <TextBlock Text="VRChat must be running with OSC enabled before Panda Chatbox can send messages." TextWrapping="Wrap"/>
+                <TextBlock Text="In VRChat, open Action Menu → Options → OSC → Enabled. OSC normally listens on localhost port 9000." Margin="0,12,0,18" TextWrapping="Wrap"/>
+                <DockPanel Margin="0,6,0,0">
+                    <TextBox x:Name="IpBox" DockPanel.Dock="Right" Width="220"/>
+                    <TextBlock Text="OSC address" VerticalAlignment="Center"/>
+                </DockPanel>
+                <DockPanel Margin="0,12,0,0">
+                    <TextBox x:Name="PortBox" DockPanel.Dock="Right" Width="220"/>
+                    <TextBlock Text="OSC port" VerticalAlignment="Center"/>
+                </DockPanel>
+                <TextBlock Text="These settings can be changed later. The guide itself does not send messages; sending is controlled by the main window switch." Margin="0,18,0,0" Foreground="{DynamicResource Muted}" TextWrapping="Wrap"/>
+            </StackPanel>
+
+            <StackPanel x:Name="StatusPage" Visibility="Collapsed">
+                <TextBlock Text="Add the first status message. You can use a plain message or open the template helper for live-value tokens." TextWrapping="Wrap"/>
+                <TextBox x:Name="FirstStatusBox" Margin="0,16,0,8" MinHeight="72" AcceptsReturn="True"
+                         TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"/>
+                <Button Content="Open template helper" HorizontalAlignment="Left" Padding="12,7"
+                        Click="TemplateHelper_Click"/>
+                <TextBlock Text="Messages can be edited, grouped, and rotated later from the Status tab." Margin="0,16,0,0" Foreground="{DynamicResource Muted}" TextWrapping="Wrap"/>
+            </StackPanel>
+
+            <StackPanel x:Name="IntegrationsPage" Visibility="Collapsed">
+                <TextBlock Text="Choose optional content to show alongside your status. You can change any of these later." TextWrapping="Wrap"/>
+                <CheckBox x:Name="CpuCheck" Content="CPU, RAM, GPU and VRAM stats" Margin="0,20,0,0"/>
+                <CheckBox x:Name="MediaCheck" Content="Now playing (Windows media sessions and player windows)" Margin="0,14,0,0"/>
+                <CheckBox x:Name="WeatherCheck" Content="Local weather (requires an internet connection)" Margin="0,14,0,0"/>
+                <TextBlock Text="Media and weather stay off unless you opt in. New installs start paused; enable sending in the main window when you are ready." Margin="0,20,0,0" Foreground="{DynamicResource Muted}" TextWrapping="Wrap"/>
+            </StackPanel>
+        </Grid>
+
+        <Grid Grid.Row="2" Margin="0,18,0,0">
+            <Button Content="Skip for now" HorizontalAlignment="Left" Padding="12,8" Click="Skip_Click"/>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button x:Name="BackButton" Content="Back" Padding="16,8" Margin="0,0,8,0"
+                        Click="Back_Click" Visibility="Collapsed"/>
+                <Button x:Name="NextButton" Content="Next" Padding="18,8" IsDefault="True"
+                        Click="Next_Click"/>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Window>

@@ -315,16 +315,27 @@ public sealed class Engine
             collection = manual.Collection;
         else
         {
-            var scheduled = Cfg.ScheduledProfiles.FirstOrDefault(profile =>
-                profile != null && IsScheduleActive(profile, DateTime.Now));
+            var scheduled = Cfg.ScheduledProfiles
+                .Select((profile, index) => (Profile: profile, Index: index))
+                .Where(item => item.Profile != null && IsScheduleActive(item.Profile, DateTime.Now))
+                .OrderByDescending(item => item.Profile.Priority)
+                .ThenBy(item => item.Index)
+                .Select(item => item.Profile)
+                .FirstOrDefault();
             collection = scheduled?.Collection;
             if (scheduled == null)
             {
-                collection = Cfg.StatusProfiles.FirstOrDefault(profile =>
-                    profile != null && !string.IsNullOrWhiteSpace(profile.AppMatch)
-                    && (_foregroundApp.Contains(profile.AppMatch, StringComparison.OrdinalIgnoreCase)
-                        || _foregroundExecutable.Contains(profile.AppMatch, StringComparison.OrdinalIgnoreCase)
-                        || _foregroundTitle.Contains(profile.AppMatch, StringComparison.OrdinalIgnoreCase)))?.Collection;
+                collection = Cfg.StatusProfiles
+                    .Select((profile, index) => (Profile: profile, Index: index))
+                    .Where(item => item.Profile != null && !string.IsNullOrWhiteSpace(item.Profile.AppMatch)
+                        && (_foregroundApp.Contains(item.Profile.AppMatch, StringComparison.OrdinalIgnoreCase)
+                            || _foregroundExecutable.Contains(item.Profile.AppMatch, StringComparison.OrdinalIgnoreCase)
+                            || _foregroundTitle.Contains(item.Profile.AppMatch, StringComparison.OrdinalIgnoreCase)))
+                    .OrderByDescending(item => item.Profile.Priority)
+                    .ThenByDescending(item => item.Profile.AppMatch.Length)
+                    .ThenBy(item => item.Index)
+                    .Select(item => item.Profile.Collection)
+                    .FirstOrDefault();
             }
         }
 
@@ -359,9 +370,25 @@ public sealed class Engine
             return false;
 
         var current = TimeOnly.FromDateTime(now);
-        return start < end
-            ? current >= start && current < end
-            : current >= start || current < end;
+        if (start < end)
+            return IsScheduleDayActive(profile.Days, now.DayOfWeek) && current >= start && current < end;
+        if (current >= start)
+            return IsScheduleDayActive(profile.Days, now.DayOfWeek);
+        if (current < end)
+            return IsScheduleDayActive(profile.Days, now.AddDays(-1).DayOfWeek);
+        return false;
+    }
+
+    static bool IsScheduleDayActive(string days, DayOfWeek day)
+    {
+        if (string.IsNullOrWhiteSpace(days)) return false;
+        var tokens = days.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (tokens.Length == 0 || tokens.Any(token => !Enum.GetNames<DayOfWeek>()
+            .Any(name => name.StartsWith(token, StringComparison.OrdinalIgnoreCase) && token.Length >= 3)))
+            return false;
+        string abbreviation = day.ToString()[..3];
+        return tokens.Any(item => item.Equals(abbreviation, StringComparison.OrdinalIgnoreCase)
+            || item.Equals(day.ToString(), StringComparison.OrdinalIgnoreCase));
     }
 
     async Task ScanMediaAsync()

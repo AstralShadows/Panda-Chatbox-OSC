@@ -52,7 +52,7 @@
             </Setter>
         </Style>
     </Window.Resources>
-    <Grid>
+    <Grid x:Name="MainRoot">
         <Grid.RowDefinitions>
             <RowDefinition Height="72"/>
             <RowDefinition Height="*"/>
@@ -95,10 +95,10 @@
                 </StackPanel>
 
                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                    <RadioButton Style="{StaticResource Tab}" Content="Status" Tag="0" IsChecked="True" Checked="Tab_Checked"/>
-                    <RadioButton Style="{StaticResource Tab}" Content="Chat" Tag="1" Checked="Tab_Checked"/>
-                    <RadioButton Style="{StaticResource Tab}" Content="Integrations" Tag="2" Checked="Tab_Checked"/>
-                    <RadioButton Style="{StaticResource Tab}" Content="Settings" Tag="3" Checked="Tab_Checked"/>
+                    <RadioButton x:Name="StatusTab" Style="{StaticResource Tab}" Content="Status" Tag="0" IsChecked="True" Checked="Tab_Checked"/>
+                    <RadioButton x:Name="ChatTab" Style="{StaticResource Tab}" Content="Chat" Tag="1" Checked="Tab_Checked"/>
+                    <RadioButton x:Name="IntegrationsTab" Style="{StaticResource Tab}" Content="Integrations" Tag="2" Checked="Tab_Checked"/>
+                    <RadioButton x:Name="SettingsTab" Style="{StaticResource Tab}" Content="Settings" Tag="3" Checked="Tab_Checked"/>
                 </StackPanel>
 
                 <StackPanel Grid.Column="3" VerticalAlignment="Center" Margin="16,0,0,0">
@@ -209,7 +209,7 @@
                                                         </TextBlock.Style>
                                                     </TextBlock>
                                                     <TextBox Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}" Margin="5,5"
-                                                             MaxLength="144" LostFocus="Edit_LostFocus" KeyDown="Edit_KeyDown"
+                                                             LostFocus="Edit_LostFocus" KeyDown="Edit_KeyDown"
                                                              IsVisibleChanged="Edit_VisibleChanged">
                                                         <TextBox.Style>
                                                             <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
@@ -267,9 +267,10 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="130"/>
                                 <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <Grid>
-                                <TextBox x:Name="StatusEdit" Height="40" MaxLength="144" Padding="10,0,64,0"
+                                <TextBox x:Name="StatusEdit" Height="40" Padding="10,0,64,0"
                                          TextChanged="StatusEdit_TextChanged" KeyDown="StatusEdit_KeyDown"/>
                                 <TextBlock x:Name="Placeholder" Text="Create here a new status" IsHitTestVisible="False"
                                            Foreground="{DynamicResource Muted}" Margin="14,0,0,0" VerticalAlignment="Center"/>
@@ -280,8 +281,11 @@
                             <TextBox x:Name="StatusCollectionEdit" Grid.Column="1" Height="40" Margin="8,0,0,0"
                                      Padding="8,0" VerticalContentAlignment="Center" Text="Default"
                                      ToolTip="Collection for the new status"/>
-                            <Button Grid.Column="2" Style="{StaticResource Primary}" Content="Create" Height="40" Padding="24,0"
-                                    Margin="10,0,0,0" Click="Add_Click"/>
+                            <Button Grid.Column="2" Content="Template helper" Height="40" Padding="12,0"
+                                    Margin="10,0,0,0" Click="TemplateHelper_Click"
+                                    ToolTip="Insert a live status token and preview its expanded length"/>
+                            <Button Grid.Column="3" Style="{StaticResource Primary}" Content="Create" Height="40" Padding="20,0"
+                                    Margin="8,0,0,0" Click="Add_Click"/>
                         </Grid>
                     </Border>
                 </Grid>
@@ -409,6 +413,27 @@
                     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                         <StackPanel x:Name="SettingsStack" Margin="0,0,8,0">
 
+                            <Expander Style="{StaticResource Section}" Header="Accessibility &amp; onboarding" IsExpanded="True">
+                                <StackPanel>
+                                    <TextBlock Style="{StaticResource Hint}" Margin="0,10,0,0"
+                                               Text="Adjust the whole window scale, reopen the first-run guide, and use keyboard shortcuts for navigation and pause."/>
+                                    <DockPanel Margin="0,12,0,0">
+                                        <ComboBox x:Name="UiScaleCombo" DockPanel.Dock="Right" Width="120"
+                                                  SelectionChanged="UiScale_Changed">
+                                            <ComboBoxItem Content="80%" Tag="80"/>
+                                            <ComboBoxItem Content="100%" Tag="100"/>
+                                            <ComboBoxItem Content="120%" Tag="120"/>
+                                            <ComboBoxItem Content="140%" Tag="140"/>
+                                        </ComboBox>
+                                        <TextBlock Style="{StaticResource RowLabel}" Text="Interface scale"/>
+                                    </DockPanel>
+                                    <TextBlock Style="{StaticResource Hint}" Margin="0,6,0,0"
+                                               Text="Ctrl+1–4 switches tabs. Ctrl+Shift+P pauses or resumes automatic sending. Tab and Shift+Tab move between controls."/>
+                                    <Button Content="Open first-run guide" HorizontalAlignment="Left" Padding="14,7"
+                                            Margin="0,12,0,0" Click="OpenOnboarding_Click"/>
+                                </StackPanel>
+                            </Expander>
+
                             <!-- ===== Status profiles and schedules ===== -->
                             <Expander Style="{StaticResource Section}" Header="Status profiles &amp; schedules">
                                 <StackPanel>
@@ -426,7 +451,7 @@
                                     <Border Style="{StaticResource SubCard}">
                                         <StackPanel>
                                             <TextBlock Style="{StaticResource SubTitle}" Text="App-matched profiles"/>
-                                            <TextBlock Style="{StaticResource Hint}" Text="Fields below: profile name · text found in the app/window title (blank for manual-only) · collection"/>
+                                            <TextBlock Style="{StaticResource Hint}" Text="Fields below: profile name · app/window text match · collection · priority (-100 to 100). Higher priority wins; ties prefer the more specific app match, then list order. Manual selection overrides automation."/>
                                             <Grid Margin="0,8,0,0">
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="*"/>
@@ -448,6 +473,7 @@
                                                     <DataGridTextColumn Header="Profile" Binding="{Binding Name}" IsReadOnly="True" Width="*"/>
                                                     <DataGridTextColumn Header="App / window contains" Binding="{Binding AppMatch, UpdateSourceTrigger=PropertyChanged}" Width="1.5*"/>
                                                     <DataGridTextColumn Header="Collection" Binding="{Binding Collection, UpdateSourceTrigger=PropertyChanged}" Width="*"/>
+                                                    <DataGridTextColumn Header="Priority" Binding="{Binding Priority, UpdateSourceTrigger=PropertyChanged}" Width="76"/>
                                                 </DataGrid.Columns>
                                             </DataGrid>
                                             <Button Content="Remove selected profile" HorizontalAlignment="Right" Padding="12,6"
@@ -458,7 +484,7 @@
                                     <Border Style="{StaticResource SubCard}">
                                         <StackPanel>
                                             <TextBlock Style="{StaticResource SubTitle}" Text="Scheduled collections"/>
-                                            <TextBlock Style="{StaticResource Hint}" Text="Fields below: schedule name · start · end · collection. Use 24-hour HH:mm times; end may be earlier than start for overnight schedules."/>
+                                            <TextBlock Style="{StaticResource Hint}" Text="Schedules override app matching. Set days as comma-separated Mon,Tue,Wed,Thu,Fri,Sat,Sun; higher priority wins, ties use list order."/>
                                             <Grid Margin="0,8,0,0">
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="*"/>
@@ -484,6 +510,8 @@
                                                     <DataGridTextColumn Header="Start" Binding="{Binding StartTime, UpdateSourceTrigger=PropertyChanged}" Width="72"/>
                                                     <DataGridTextColumn Header="End" Binding="{Binding EndTime, UpdateSourceTrigger=PropertyChanged}" Width="72"/>
                                                     <DataGridTextColumn Header="Collection" Binding="{Binding Collection, UpdateSourceTrigger=PropertyChanged}" Width="*"/>
+                                                    <DataGridTextColumn Header="Days" Binding="{Binding Days, UpdateSourceTrigger=PropertyChanged}" Width="1.4*"/>
+                                                    <DataGridTextColumn Header="Priority" Binding="{Binding Priority, UpdateSourceTrigger=PropertyChanged}" Width="76"/>
                                                 </DataGrid.Columns>
                                             </DataGrid>
                                             <Button Content="Remove selected schedule" HorizontalAlignment="Right" Padding="12,6"
@@ -1012,6 +1040,8 @@
                     </Border>
 
                     <StackPanel Grid.Row="5" VerticalAlignment="Bottom">
+                        <Button x:Name="PauseButton" Margin="0,0,0,10" Padding="0,10"
+                                Content="Pause sending (Ctrl+Shift+P)" Click="Pause_Click"/>
                         <Button Margin="0,0,0,10" Padding="0,10" Content="Rearrange" Click="RearrangeLines_Click"/>
                         <Button Style="{StaticResource Primary}" Margin="0,0,0,10" Padding="0,10" Content="Send now" Click="SendNow_Click"/>
                         <Button Margin="0,0,0,12" Padding="0,10" Content="Clear chatbox" Click="Clear_Click"/>

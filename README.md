@@ -6,6 +6,14 @@ The interface and application orchestration are written in C#. A native C++ DLL 
 
 Credit for the original idea and UI inspiration goes to Boihanny.
 
+## Features
+
+- First-run guide for VRChat OSC connection, a first status message, and opt-in integrations. Reopen it from Settings; new installs start paused until you choose to send.
+- Keyboard shortcuts: `Ctrl+1` through `Ctrl+4` switch tabs; `Ctrl+Shift+P` pauses/resumes sending. Tab and Shift+Tab navigate controls.
+- Interface scaling at 80%, 100%, 120%, or 140%.
+- Status template helper with token insertion, a live example preview, and 144-character feedback.
+- Automatic status collections from foreground apps and scheduled time ranges. Schedules can be restricted to weekdays and assigned priorities. Manual profile selection overrides automation; schedules take precedence over app matches; equal-priority rules use list order (app rules prefer the most-specific match).
+
 ## Build
 
 Requirements:
