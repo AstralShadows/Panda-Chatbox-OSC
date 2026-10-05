@@ -22,7 +22,7 @@ internal static class ReleaseUpdateService
         var client = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
         client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue(
             "PandaChatbox",
-            typeof(ReleaseUpdateService).Assembly.GetName().Version?.ToString(3) ?? "3.3.1"));
+            typeof(ReleaseUpdateService).Assembly.GetName().Version?.ToString(3) ?? "3.4.0"));
         client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
         return client;
     }
