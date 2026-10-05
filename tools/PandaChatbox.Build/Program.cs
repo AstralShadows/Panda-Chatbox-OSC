@@ -58,7 +58,7 @@ static string? FindProjectDirectory()
 
 static int Publish(string projectDirectory, string projectPath)
 {
-    Console.WriteLine("Publishing Panda Chatbox V3.1 as a self-contained single-file app...");
+    Console.WriteLine("Publishing Panda Chatbox V3.2 as a self-contained single-file app...");
     return RunDotnet(
         projectDirectory,
         "publish",

@@ -3,6 +3,9 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using System.Diagnostics;
+using System.Net.Http;
+using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -20,6 +23,12 @@ public partial class MainWindow : Window
     readonly Engine _eng;
     UIElement[]? _pages;
     bool _begun;
+    bool _updateCheckInProgress;
+    bool _updateAvailable;
+    bool _openReleasePageOnClick;
+    Uri? _latestReleaseUri;
+    DispatcherTimer? _updateTimer;
+    readonly CancellationTokenSource _updateCancellation = new();
 
     // drag-to-reorder state
     Point _dragStart;
@@ -38,7 +47,12 @@ public partial class MainWindow : Window
         ApplyWindowChrome();
         UpdateBackgroundSettings();
 
-        Closing += (_, _) => SaveNow();
+        Closing += (_, _) =>
+        {
+            _updateTimer?.Stop();
+            _updateCancellation.Cancel();
+            SaveNow();
+        };
         StateChanged += (_, _) => UpdateMaximizeButton();
 
         // gentle fade-in when the window opens
@@ -73,10 +87,111 @@ public partial class MainWindow : Window
         save.Tick += (_, _) => SaveNow();
         save.Start();
 
+        UpdateButton.Content = "Checking for updates...";
+        _ = CheckForUpdatesAsync();
+        _updateTimer = new DispatcherTimer { Interval = TimeSpan.FromHours(6) };
+        _updateTimer.Tick += async (_, _) => await CheckForUpdatesAsync();
+        _updateTimer.Start();
+
         RefreshUi();
     }
 
     void SaveNow() => SettingsStore.Save(_cfg, _eng.Messages);
+
+    async Task CheckForUpdatesAsync()
+    {
+        if (_updateCheckInProgress || _updateCancellation.IsCancellationRequested) return;
+
+        _updateCheckInProgress = true;
+        UpdateButton.IsEnabled = false;
+        UpdateButton.Foreground = (Brush)FindResource("Muted");
+        UpdateButton.Content = "Checking for updates...";
+        UpdateButton.ToolTip = null;
+        _openReleasePageOnClick = false;
+
+        try
+        {
+            var release = await ReleaseUpdateService.GetLatestReleaseAsync(_updateCancellation.Token);
+            if (_updateCancellation.IsCancellationRequested) return;
+
+            if (release == null)
+            {
+                _latestReleaseUri = new Uri("https://github.com/AstralShadows/Panda-Chatbox-OSC/releases");
+                _updateAvailable = false;
+                _openReleasePageOnClick = true;
+                UpdateButton.Content = "No releases found · view releases";
+                UpdateButton.ToolTip = "Open the GitHub releases page.";
+                return;
+            }
+
+            _latestReleaseUri = release.PageUri;
+            Version? currentVersion = GetCurrentVersion();
+            _updateAvailable = !release.IsPrerelease
+                && release.Version != null
+                && currentVersion != null
+                && release.Version > currentVersion;
+
+            if (_updateAvailable)
+            {
+                _openReleasePageOnClick = true;
+                UpdateButton.Content = $"Update available: v{release.Version} · click to view";
+                UpdateButton.Foreground = (Brush)FindResource("Green");
+                UpdateButton.ToolTip = "Open the GitHub release page to read the notes and download the update.";
+            }
+            else if (release.Version == null)
+            {
+                _openReleasePageOnClick = true;
+                UpdateButton.Content = "View GitHub releases";
+                UpdateButton.ToolTip = "The latest release has no version tag to compare. Click to view GitHub releases.";
+            }
+            else
+            {
+                UpdateButton.Content = $"Up to date · v{currentVersion}";
+                UpdateButton.ToolTip = $"Latest stable release: v{release.Version}. Click to check again.";
+            }
+        }
+        catch (OperationCanceledException) when (_updateCancellation.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException or JsonException or InvalidOperationException)
+        {
+            if (_updateCancellation.IsCancellationRequested) return;
+            _updateAvailable = false;
+            UpdateButton.Content = "Couldn't check for updates · click to retry";
+            UpdateButton.ToolTip = exception.Message;
+        }
+        finally
+        {
+            _updateCheckInProgress = false;
+            if (!_updateCancellation.IsCancellationRequested)
+                UpdateButton.IsEnabled = true;
+        }
+    }
+
+    static Version? GetCurrentVersion()
+    {
+        var version = typeof(MainWindow).Assembly.GetName().Version;
+        return version == null ? null : new Version(version.Major, Math.Max(0, version.Minor), Math.Max(0, version.Build));
+    }
+
+    async void UpdateButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (!_openReleasePageOnClick)
+        {
+            await CheckForUpdatesAsync();
+        }
+        if (!_openReleasePageOnClick || _latestReleaseUri == null) return;
+
+        try
+        {
+            Process.Start(new ProcessStartInfo(_latestReleaseUri!.AbsoluteUri) { UseShellExecute = true });
+        }
+        catch (Exception exception) when (exception is InvalidOperationException or System.ComponentModel.Win32Exception)
+        {
+            MessageBox.Show(this, "Couldn't open the GitHub release page:\n\n" + exception.Message,
+                "Panda Chatbox", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
 
     void ApplyWindowChrome()
     {
