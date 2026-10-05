@@ -203,8 +203,121 @@ public partial class MainWindow : Window
         OpenReleasePage(_latestReleaseUri);
     }
 
-    void ShowUpdateNotice()
+    void RearrangeLines_Click(object sender, RoutedEventArgs e)
     {
+        var keys = _cfg.DisplayLineOrder.Count > 0 ? _cfg.DisplayLineOrder.ToList() : AppSettings.DefaultDisplayLineOrder().ToList();
+        var displayItems = keys.Select(ToDisplayName).ToList();
+        var displayMap = keys.ToDictionary(key => ToDisplayName(key), key => key, StringComparer.OrdinalIgnoreCase);
+
+        var dialog = new Window
+        {
+            Title = "Rearrange chatbox lines",
+            Owner = this,
+            Width = 320,
+            Height = 480,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            ResizeMode = ResizeMode.NoResize,
+            ShowInTaskbar = false,
+            Background = (Brush)FindResource("Bg")
+        };
+
+        var root = new Grid { Margin = new Thickness(12) };
+        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+
+        var title = new TextBlock
+        {
+            Text = "Drag the order below",
+            Margin = new Thickness(0, 0, 0, 8),
+            FontSize = 16,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = (Brush)FindResource("Text")
+        };
+        Grid.SetRow(title, 0);
+        root.Children.Add(title);
+
+        var actions = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 0, 0, 8) };
+        var up = new Button { Content = "↑ Up", Width = 80, Margin = new Thickness(0, 0, 8, 0) };
+        var down = new Button { Content = "↓ Down", Width = 80 };
+        actions.Children.Add(up);
+        actions.Children.Add(down);
+        Grid.SetRow(actions, 1);
+        root.Children.Add(actions);
+
+        var list = new ListBox { Height = 280, ItemsSource = displayItems, SelectedIndex = 0 };
+        Grid.SetRow(list, 2);
+        root.Children.Add(list);
+
+        var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 12, 0, 0) };
+        var cancel = new Button { Content = "Cancel", Width = 90, Margin = new Thickness(0, 0, 8, 0) };
+        var apply = new Button { Content = "Apply", Width = 90, Style = (Style)FindResource("Primary") };
+        buttons.Children.Add(cancel);
+        buttons.Children.Add(apply);
+        Grid.SetRow(buttons, 3);
+        root.Children.Add(buttons);
+
+        up.Click += (_, _) =>
+        {
+            int idx = list.SelectedIndex;
+            if (idx <= 0) return;
+            var items = displayItems.ToList();
+            var sel = items[idx];
+            items.RemoveAt(idx);
+            items.Insert(idx - 1, sel);
+            list.ItemsSource = items;
+            list.SelectedIndex = idx - 1;
+            displayItems.Clear();
+            foreach (var item in items) displayItems.Add(item);
+        };
+
+        down.Click += (_, _) =>
+        {
+            int idx = list.SelectedIndex;
+            if (idx < 0 || idx >= displayItems.Count - 1) return;
+            var items = displayItems.ToList();
+            var sel = items[idx];
+            items.RemoveAt(idx);
+            items.Insert(idx + 1, sel);
+            list.ItemsSource = items;
+            list.SelectedIndex = idx + 1;
+            displayItems.Clear();
+            foreach (var item in items) displayItems.Add(item);
+        };
+
+        cancel.Click += (_, _) => dialog.Close();
+        apply.Click += (_, _) =>
+        {
+            var order = list.Items.Cast<string>().Select(item => displayMap[item]).ToList();
+            _cfg.DisplayLineOrder = new ObservableCollection<string>(order);
+            _cfg.EnsureDisplayLineOrder();
+            RefreshUi();
+            SaveNow();
+            dialog.Close();
+        };
+
+        dialog.Content = root;
+        dialog.ShowDialog();
+    }
+
+    static string ToDisplayName(string key) => key switch
+    {
+        "Status" => "Status",
+        "CPU" => "CPU",
+        "RAM" => "RAM",
+        "GPU" => "GPU",
+        "VRAM" => "VRAM",
+        "DateTime" => "Date / Time",
+        "Weather" => "Weather",
+        "Music" => "Music",
+        "App" => "App",
+        "Battery" => "Battery",
+        "Uptime" => "Uptime",
+        _ => key
+    };
+
+    void ShowUpdateNotice()    {
         if (!IsVisible || !_updateAvailable || _latestReleaseUri == null || _latestReleaseVersion == null) return;
         var notice = new UpdateNoticeWindow(_latestReleaseVersion, GetCurrentVersion() ?? new Version(0, 0));
         notice.Owner = this;
@@ -546,6 +659,148 @@ public partial class MainWindow : Window
         _eng.ConfigurationChanged();
         SaveNow();
         RefreshUi();
+    }
+
+    void MainWindow_KeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Handled) return;
+        if (Keyboard.FocusedElement is TextBox or ComboBox or PasswordBox) return;
+
+        string hotkey = NormalizeHotkey(Keyboard.Modifiers, e.Key);
+        if (string.IsNullOrWhiteSpace(hotkey)) return;
+
+        var preset = _cfg.QuickStatusPresets.FirstOrDefault(item =>
+            item.Enabled && string.Equals(item.Hotkey, hotkey, StringComparison.OrdinalIgnoreCase));
+        if (preset == null) return;
+
+        ApplyQuickPreset(preset);
+        e.Handled = true;
+    }
+
+    static string NormalizeHotkey(ModifierKeys modifiers, Key key)
+    {
+        var pieces = new List<string>();
+        if ((modifiers & ModifierKeys.Control) == ModifierKeys.Control) pieces.Add("Ctrl");
+        if ((modifiers & ModifierKeys.Alt) == ModifierKeys.Alt) pieces.Add("Alt");
+        if ((modifiers & ModifierKeys.Shift) == ModifierKeys.Shift) pieces.Add("Shift");
+        if ((modifiers & ModifierKeys.Windows) == ModifierKeys.Windows) pieces.Add("Win");
+
+        if (key == Key.None) return "";
+        string keyText = key.ToString();
+        if (keyText.StartsWith("D") && keyText.Length > 1 && char.IsDigit(keyText[1])) keyText = keyText[1..];
+        if (keyText.StartsWith("NumPad")) keyText = keyText[6..];
+        if (pieces.Count == 0) return keyText;
+        return string.Join("+", pieces) + "+" + keyText;
+    }
+
+    static bool TryParseHotkey(string? hotkey, out ModifierKeys modifiers, out Key key)
+    {
+        modifiers = ModifierKeys.None;
+        key = Key.None;
+        if (string.IsNullOrWhiteSpace(hotkey)) return false;
+
+        string[] parts = hotkey.Split('+', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (parts.Length == 0) return false;
+
+        foreach (string part in parts)
+        {
+            if (string.Equals(part, "Ctrl", StringComparison.OrdinalIgnoreCase)) modifiers |= ModifierKeys.Control;
+            else if (string.Equals(part, "Alt", StringComparison.OrdinalIgnoreCase)) modifiers |= ModifierKeys.Alt;
+            else if (string.Equals(part, "Shift", StringComparison.OrdinalIgnoreCase)) modifiers |= ModifierKeys.Shift;
+            else if (string.Equals(part, "Win", StringComparison.OrdinalIgnoreCase)) modifiers |= ModifierKeys.Windows;
+            else if (Enum.TryParse<Key>(part, true, out var parsedKey)) key = parsedKey;
+            else if (part.Length == 1 && char.IsDigit(part[0]))
+                key = part[0] switch
+                {
+                    '0' => Key.D0,
+                    '1' => Key.D1,
+                    '2' => Key.D2,
+                    '3' => Key.D3,
+                    '4' => Key.D4,
+                    '5' => Key.D5,
+                    '6' => Key.D6,
+                    '7' => Key.D7,
+                    '8' => Key.D8,
+                    '9' => Key.D9,
+                    _ => Key.None
+                };
+            else if (part.StartsWith("F", StringComparison.OrdinalIgnoreCase) && int.TryParse(part[1..], out var funcKey) && funcKey >= 1 && funcKey <= 12)
+                key = (Key)Enum.Parse(typeof(Key), "F" + funcKey, true);
+            else return false;
+
+            if (key == Key.None && part.Length == 1 && char.IsDigit(part[0])) return false;
+        }
+
+        return key != Key.None;
+    }
+
+    void ApplyQuickPreset(QuickStatusPreset preset)
+    {
+        if (string.IsNullOrWhiteSpace(preset.Collection)) preset.Collection = "Default";
+        if (!string.IsNullOrWhiteSpace(preset.Collection))
+            _eng.SetCollection(preset.Collection);
+
+        if (!string.IsNullOrWhiteSpace(preset.Message))
+            _eng.SendChat(preset.Message.Trim());
+        else
+            _eng.Kick();
+
+        SaveNow();
+    }
+
+    void AddQuickPreset_Click(object sender, RoutedEventArgs e)
+    {
+        string name = QuickPresetNameEdit.Text.Trim();
+        string message = QuickPresetMessageEdit.Text.Trim();
+        string collection = QuickPresetCollectionEdit.Text.Trim();
+        string hotkey = QuickPresetHotkeyEdit.Text.Trim();
+
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            MessageBox.Show(this, "Give the quick preset a name first.", "Panda Chatbox",
+                MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(hotkey) || !TryParseHotkey(hotkey, out var modifiers, out var key))
+        {
+            MessageBox.Show(this, "Use a shortcut like Ctrl+Alt+1 or F5.", "Panda Chatbox",
+                MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        if (_cfg.QuickStatusPresets.Any(item =>
+            string.Equals(item.Name, name, StringComparison.OrdinalIgnoreCase)))
+        {
+            MessageBox.Show(this, "A quick preset with that name already exists.", "Panda Chatbox",
+                MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        var normalized = NormalizeHotkey(modifiers, key);
+        _cfg.QuickStatusPresets.Add(new QuickStatusPreset
+        {
+            Name = name,
+            Message = message,
+            Collection = string.IsNullOrWhiteSpace(collection) ? "Default" : collection,
+            Hotkey = normalized,
+            Enabled = true
+        });
+
+        QuickPresetNameEdit.Clear();
+        QuickPresetMessageEdit.Clear();
+        QuickPresetCollectionEdit.Text = "Default";
+        QuickPresetHotkeyEdit.Clear();
+        SaveNow();
+    }
+
+    void RemoveQuickPreset_Click(object sender, RoutedEventArgs e)
+    {
+        QuickPresetsGrid.CommitEdit(DataGridEditingUnit.Cell, true);
+        QuickPresetsGrid.CommitEdit(DataGridEditingUnit.Row, true);
+        if (QuickPresetsGrid.SelectedItem is not QuickStatusPreset preset) return;
+        _cfg.QuickStatusPresets.Remove(preset);
+        SaveNow();
     }
 
     void AddProfile_Click(object sender, RoutedEventArgs e)

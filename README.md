@@ -11,4 +11,3 @@ it has full spotify support using windows media manager has fun features like PC
 ## Release notifications
 
 The app checks the public GitHub Releases page at startup and every six hours while open. When a newer stable version is available, a separate update window appears with options to view the release, close it for now, or permanently disable update popups. The update notice below the VRChat send controls can still be used to open the release page. Updates are not downloaded or installed automatically.
-

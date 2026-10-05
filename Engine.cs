@@ -58,6 +58,9 @@ public sealed class Engine
         Cfg = cfg;
         Cfg.StatusProfiles ??= new ObservableCollection<StatusProfile>();
         Cfg.ScheduledProfiles ??= new ObservableCollection<ScheduledStatusProfile>();
+        Cfg.QuickStatusPresets ??= new ObservableCollection<QuickStatusPreset>();
+        Cfg.DisplayLineOrder ??= new ObservableCollection<string>();
+        Cfg.EnsureDisplayLineOrder();
         Cfg.ManualProfileName ??= "";
         Messages = messages;
         _wCity = cfg.City;
@@ -371,6 +374,14 @@ public sealed class Engine
         _force = true;
     }
 
+    public void SetCollection(string collectionName)
+    {
+        _activeCollection = string.IsNullOrWhiteSpace(collectionName) ? null : collectionName.Trim();
+        PickStatus();
+        _lastMsg = Now;
+        _force = true;
+    }
+
     static bool IsScheduleActive(ScheduledStatusProfile profile, DateTime now)
     {
         if (!profile.Enabled
@@ -427,33 +438,51 @@ public sealed class Engine
         if (Now < _overrideUntil) return _overrideText;
 
         string sep = Cfg.StatSeparator;
-        var lines = new List<string>();
+        var entries = new List<(string Key, string Text)>();
         if (Cfg.ShowStatus)
         {
             string s = StatusLine();
-            if (s.Length > 0) lines.Add(s);
+            if (s.Length > 0) entries.Add(("Status", s));
         }
-        AddIntegrationLines(lines);
+        entries.AddRange(BuildIntegrationEntries(sep));
 
         if (Cfg.ShowCpu)
-            lines.Add(Tagged(Cfg.TagCpu, Cfg.ShowCpuName ? $"{_hardware.CpuName}{sep}{_cpu:0}%" : $"{_cpu:0}%"));
+            entries.Add(("CPU", Tagged(Cfg.TagCpu, Cfg.ShowCpuName ? $"{_hardware.CpuName}{sep}{_cpu:0}%" : $"{_cpu:0}%")));
         if (Cfg.ShowRam)
         {
             string pct = Cfg.ShowRamPercent ? $" ({(int)(_ram / _hardware.TotalRamGb * 100)}%)" : "";
-            lines.Add(Tagged(Cfg.TagRam, $"{UsedGb(_ram)}/{WholeGb(_hardware.TotalRamGb)}GB{pct}"));
+            entries.Add(("RAM", Tagged(Cfg.TagRam, $"{UsedGb(_ram)}/{WholeGb(_hardware.TotalRamGb)}GB{pct}")));
         }
-        if (Cfg.ShowGpu) lines.Add(Tagged(Cfg.TagGpu, _hardware.GpuName));
+        if (Cfg.ShowGpu) entries.Add(("GPU", Tagged(Cfg.TagGpu, _hardware.GpuName)));
         if (Cfg.ShowVram)
         {
             string usage = _hardware.UsedVramGb is double used
                 ? $"{UsedGb(used)}/{WholeGb(_hardware.TotalVramGb)}GB"
                 : $"Usage unavailable / {WholeGb(_hardware.TotalVramGb)}GB";
-            lines.Add(Tagged(Cfg.TagVram, usage));
+            entries.Add(("VRAM", Tagged(Cfg.TagVram, usage)));
         }
-        return string.Join("\n", lines);
+
+        var result = new List<string>();
+        var order = (Cfg.DisplayLineOrder?.Count > 0 ? Cfg.DisplayLineOrder : AppSettings.DefaultDisplayLineOrder()).ToList();
+        foreach (var key in order)
+        {
+            var match = entries.FirstOrDefault(entry => string.Equals(entry.Key, key, StringComparison.OrdinalIgnoreCase));
+            if (match.Text.Length > 0)
+            {
+                result.Add(match.Text);
+            }
+        }
+
+        foreach (var entry in entries)
+        {
+            if (result.Contains(entry.Text, StringComparer.Ordinal)) continue;
+            result.Add(entry.Text);
+        }
+
+        return string.Join("\n", result);
     }
 
-    void AddIntegrationLines(List<string> lines)
+    IEnumerable<(string Key, string Text)> BuildIntegrationEntries(string sep)
     {
         if (Cfg.ShowTime || Cfg.ShowDate)
         {
@@ -468,26 +497,26 @@ public sealed class Engine
                     : (Cfg.ShowSeconds ? "h:mm:ss tt" : "h:mm tt");
                 tl += dt.ToString(fmt, CultureInfo.InvariantCulture);
             }
-            lines.Add(Tagged(Cfg.ShowTime ? Cfg.TagTime : Cfg.TagDate, tl));
+            yield return ("DateTime", Tagged(Cfg.ShowTime ? Cfg.TagTime : Cfg.TagDate, tl));
         }
         if (Cfg.ShowWeather && Weather.Text.Length > 0)
-            lines.Add(Tagged(Cfg.TagWeather, Weather.Text));
+            yield return ("Weather", Tagged(Cfg.TagWeather, Weather.Text));
         if (Cfg.ShowMedia && _mediaText.Length > 0)
         {
             string t = _mediaText;
             int mx = Math.Max(10, Cfg.MediaMax);
             if (t.Length > mx) t = t[..(mx - 2)] + "..";
-            lines.Add(Tagged(Cfg.TagMusic, Cfg.ShowMediaApp ? $"{t} ({_mediaApp})" : t));
+            yield return ("Music", Tagged(Cfg.TagMusic, Cfg.ShowMediaApp ? $"{t} ({_mediaApp})" : t));
         }
         if (Cfg.ShowApp && _activeApp.Length > 0)
-            lines.Add(Tagged(Cfg.TagApp, _activeApp));
+            yield return ("App", Tagged(Cfg.TagApp, _activeApp));
         if (Cfg.ShowBattery && Native.GetSystemPowerStatus(out var sp) && sp.BatteryFlag != 128 && sp.BatteryLifePercent <= 100)
-            lines.Add(Tagged(Cfg.TagBattery, $"{sp.BatteryLifePercent}%" + (sp.ACLineStatus == 1 ? " (charging)" : "")));
+            yield return ("Battery", Tagged(Cfg.TagBattery, $"{sp.BatteryLifePercent}%" + (sp.ACLineStatus == 1 ? " (charging)" : "")));
         if (Cfg.ShowUptime)
         {
             long sec = Environment.TickCount64 / 1000;
             int d = (int)(sec / 86400), h = (int)(sec / 3600 % 24), m = (int)(sec / 60 % 60);
-            lines.Add(Tagged(Cfg.TagUptime, d > 0 ? $"{d}d {h}h" : $"{h}h {m}m"));
+            yield return ("Uptime", Tagged(Cfg.TagUptime, d > 0 ? $"{d}d {h}h" : $"{h}h {m}m"));
         }
     }
 }

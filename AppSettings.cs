@@ -66,6 +66,8 @@ public class AppSettings
     public string StatusSuffix { get; set; } = "";
     public ObservableCollection<StatusProfile> StatusProfiles { get; set; } = new();
     public ObservableCollection<ScheduledStatusProfile> ScheduledProfiles { get; set; } = new();
+    public ObservableCollection<QuickStatusPreset> QuickStatusPresets { get; set; } = new();
+    public ObservableCollection<string> DisplayLineOrder { get; set; } = new();
     public string ManualProfileName { get; set; } = "";
 
     // ---- timing ----
@@ -141,6 +143,37 @@ public class AppSettings
         foreach (var property in typeof(AppSettings).GetProperties().Where(property => property.CanRead && property.CanWrite))
             property.SetValue(this, property.GetValue(source));
     }
+
+    public static IReadOnlyList<string> DefaultDisplayLineOrder() => new[]
+    {
+        "Status",
+        "CPU",
+        "RAM",
+        "GPU",
+        "VRAM",
+        "DateTime",
+        "Weather",
+        "Music",
+        "App",
+        "Battery",
+        "Uptime"
+    };
+
+    public void EnsureDisplayLineOrder()
+    {
+        var defaults = DefaultDisplayLineOrder();
+        var items = DisplayLineOrder?
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList() ?? new List<string>();
+
+        foreach (var key in defaults)
+        {
+            if (!items.Contains(key, StringComparer.OrdinalIgnoreCase)) items.Add(key);
+        }
+
+        DisplayLineOrder = new ObservableCollection<string>(items);
+    }
 }
 
 public class StatusProfile
@@ -155,6 +188,15 @@ public class ScheduledStatusProfile
     public string Name { get; set; } = "";
     public string StartTime { get; set; } = "09:00";
     public string EndTime { get; set; } = "17:00";
+    public string Collection { get; set; } = "Default";
+    public bool Enabled { get; set; } = true;
+}
+
+public class QuickStatusPreset
+{
+    public string Name { get; set; } = "";
+    public string Message { get; set; } = "";
+    public string Hotkey { get; set; } = "";
     public string Collection { get; set; } = "Default";
     public bool Enabled { get; set; } = true;
 }

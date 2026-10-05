@@ -7,7 +7,8 @@
         UseLayoutRounding="True"
         TextOptions.TextFormattingMode="Ideal" TextOptions.TextRenderingMode="Grayscale"
         RenderOptions.BitmapScalingMode="HighQuality" RenderOptions.EdgeMode="Unspecified"
-        Topmost="{Binding Topmost, Mode=TwoWay}">
+        Topmost="{Binding Topmost, Mode=TwoWay}"
+        KeyDown="MainWindow_KeyDown">
     <Window.Resources>
         <Style x:Key="WindowControlButton" TargetType="Button">
             <Setter Property="Width" Value="36"/>
@@ -485,6 +486,41 @@
                                                     Margin="0,8,0,0" Click="RemoveSchedule_Click"/>
                                         </StackPanel>
                                     </Border>
+                                </StackPanel>
+                            </Expander>
+
+                            <Expander Style="{StaticResource Section}" Header="Quick status presets">
+                                <StackPanel>
+                                    <TextBlock Style="{StaticResource Hint}" Margin="0,10,0,0"
+                                               Text="Define instant status actions and assign a keyboard shortcut such as Ctrl+Alt+1. If you leave the message blank, the preset just switches to the chosen collection."/>
+                                    <Grid Margin="0,12,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBox x:Name="QuickPresetNameEdit" Margin="0,0,6,0" ToolTip="Preset name"/>
+                                        <TextBox x:Name="QuickPresetMessageEdit" Grid.Column="1" Margin="6,0" ToolTip="Status text to send (optional)"/>
+                                        <TextBox x:Name="QuickPresetCollectionEdit" Grid.Column="2" Margin="6,0" Text="Default" ToolTip="Target collection"/>
+                                        <TextBox x:Name="QuickPresetHotkeyEdit" Grid.Column="3" Margin="6,0" ToolTip="Shortcut like Ctrl+Alt+1"/>
+                                        <Button Grid.Column="4" Content="Add" Padding="14,6" Margin="6,0,0,0" Click="AddQuickPreset_Click"/>
+                                    </Grid>
+                                    <DataGrid x:Name="QuickPresetsGrid" Margin="0,8,0,0" Height="140"
+                                              ItemsSource="{Binding QuickStatusPresets}"
+                                              AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
+                                              HeadersVisibility="Column" SelectionMode="Single">
+                                        <DataGrid.Columns>
+                                            <DataGridCheckBoxColumn Header="On" Binding="{Binding Enabled, UpdateSourceTrigger=PropertyChanged}" Width="42"/>
+                                            <DataGridTextColumn Header="Name" Binding="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Width="*"/>
+                                            <DataGridTextColumn Header="Message" Binding="{Binding Message, UpdateSourceTrigger=PropertyChanged}" Width="1.6*"/>
+                                            <DataGridTextColumn Header="Collection" Binding="{Binding Collection, UpdateSourceTrigger=PropertyChanged}" Width="*"/>
+                                            <DataGridTextColumn Header="Hotkey" Binding="{Binding Hotkey, UpdateSourceTrigger=PropertyChanged}" Width="120"/>
+                                        </DataGrid.Columns>
+                                    </DataGrid>
+                                    <Button Content="Remove selected preset" HorizontalAlignment="Right" Padding="12,6"
+                                            Margin="0,8,0,0" Click="RemoveQuickPreset_Click"/>
                                 </StackPanel>
                             </Expander>
 
@@ -972,8 +1008,10 @@
                     </Border>
 
                     <StackPanel Grid.Row="5" VerticalAlignment="Bottom">
+                        <Button Margin="0,0,0,10" Padding="0,10" Content="Rearrange" Click="RearrangeLines_Click"/>
                         <Button Style="{StaticResource Primary}" Margin="0,0,0,10" Padding="0,10" Content="Send now" Click="SendNow_Click"/>
                         <Button Margin="0,0,0,12" Padding="0,10" Content="Clear chatbox" Click="Clear_Click"/>
+                        <TextBlock Text="© 2026 AstralShadows" HorizontalAlignment="Center" FontSize="11.5" Foreground="{DynamicResource Muted}" Margin="0,0,0,4"/>
                         <TextBlock Text="Panda Chatbox  V3.3.1 (C#)" HorizontalAlignment="Center" FontSize="12.5" Foreground="{DynamicResource Off}"/>
                     </StackPanel>
                 </Grid>
