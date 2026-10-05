@@ -27,6 +27,7 @@ public partial class MainWindow : Window
     bool _updatingProfileUi;
     bool _updateAvailable;
     bool _updateNoticeShown;
+    bool _changelogNoticeShown;
     bool _openReleasePageOnClick;
     Uri? _latestReleaseUri;
     Version? _latestReleaseVersion;
@@ -158,6 +159,8 @@ public partial class MainWindow : Window
                 UpdateButton.Content = $"Up to date · v{currentVersion}";
                 UpdateButton.ToolTip = $"Latest stable release: v{release.Version}. Click to check again.";
             }
+
+            await CheckForChangelogAsync(currentVersion);
         }
         catch (OperationCanceledException) when (_updateCancellation.IsCancellationRequested)
         {
@@ -181,6 +184,42 @@ public partial class MainWindow : Window
     {
         var version = typeof(MainWindow).Assembly.GetName().Version;
         return version == null ? null : new Version(version.Major, Math.Max(0, version.Minor), Math.Max(0, version.Build));
+    }
+
+    async Task CheckForChangelogAsync(Version? currentVersion)
+    {
+        if (currentVersion == null || _changelogNoticeShown
+            || string.Equals(_cfg.LastSeenChangelogVersion, currentVersion.ToString(), StringComparison.OrdinalIgnoreCase))
+            return;
+
+        VersionRelease? release;
+        try
+        {
+            release = await ReleaseUpdateService.GetReleaseForVersionAsync(currentVersion, _updateCancellation.Token);
+        }
+        catch (OperationCanceledException) when (_updateCancellation.IsCancellationRequested)
+        {
+            return;
+        }
+        catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException or JsonException or InvalidOperationException)
+        {
+            if (!_updateCancellation.IsCancellationRequested)
+                UpdateButton.ToolTip = $"Couldn't load the changelog: {exception.Message}";
+            return;
+        }
+
+        if (_updateCancellation.IsCancellationRequested || release == null) return;
+
+        _changelogNoticeShown = true;
+        _ = Dispatcher.BeginInvoke(new Action(() =>
+        {
+            if (!IsVisible || _updateCancellation.IsCancellationRequested) return;
+            var notice = new ChangelogNoticeWindow(currentVersion, release.Notes) { Owner = this };
+            notice.ShowDialog();
+            _cfg.LastSeenChangelogVersion = currentVersion.ToString();
+            SaveNow();
+            if (notice.OpenReleaseRequested) OpenReleasePage(release.PageUri);
+        }), DispatcherPriority.ApplicationIdle);
     }
 
     async void UpdateButton_Click(object sender, RoutedEventArgs e)

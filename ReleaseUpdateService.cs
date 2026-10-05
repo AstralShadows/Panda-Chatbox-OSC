@@ -7,6 +7,7 @@ using System.Text.RegularExpressions;
 namespace PandaChatbox;
 
 internal sealed record LatestRelease(Version? Version, Uri PageUri, bool IsPrerelease);
+internal sealed record VersionRelease(Version Version, Uri PageUri, string Notes);
 
 internal static class ReleaseUpdateService
 {
@@ -22,7 +23,7 @@ internal static class ReleaseUpdateService
         var client = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
         client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue(
             "PandaChatbox",
-            typeof(ReleaseUpdateService).Assembly.GetName().Version?.ToString(3) ?? "3.5.1"));
+            typeof(ReleaseUpdateService).Assembly.GetName().Version?.ToString(3) ?? "3.5.2"));
         client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
         return client;
     }
@@ -33,6 +34,26 @@ internal static class ReleaseUpdateService
         if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
             return null;
 
+        var release = await ReadReleaseAsync(response, cancellationToken);
+        return new LatestRelease(release.Version, release.PageUri, release.IsPrerelease);
+    }
+
+    public static async Task<VersionRelease?> GetReleaseForVersionAsync(Version version, CancellationToken cancellationToken)
+    {
+        string tag = Uri.EscapeDataString(version.ToString());
+        using var response = await Http.GetAsync(
+            $"https://api.github.com/repos/AstralShadows/Panda-Chatbox-OSC/releases/tags/{tag}", cancellationToken);
+        if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            return null;
+
+        var release = await ReadReleaseAsync(response, cancellationToken);
+        if (release.Version != version)
+            throw new JsonException($"GitHub returned release version {release.Version?.ToString() ?? "unknown"} instead of {version}.");
+        return new VersionRelease(version, release.PageUri, release.Notes);
+    }
+
+    static async Task<GitHubReleaseInfo> ReadReleaseAsync(HttpResponseMessage response, CancellationToken cancellationToken)
+    {
         response.EnsureSuccessStatusCode();
         await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
         var release = await JsonSerializer.DeserializeAsync<GitHubRelease>(stream, cancellationToken: cancellationToken)
@@ -48,7 +69,7 @@ internal static class ReleaseUpdateService
 
         Version? version = ParseVersion(release.TagName) ?? ParseVersion(release.Name);
 
-        return new LatestRelease(version, pageUri, release.Prerelease);
+        return new GitHubReleaseInfo(version, pageUri, release.Prerelease, release.Body);
     }
 
     static Version? ParseVersion(string? text)
@@ -73,5 +94,10 @@ internal static class ReleaseUpdateService
 
         [JsonPropertyName("prerelease")]
         public bool Prerelease { get; init; }
+
+        [JsonPropertyName("body")]
+        public string Body { get; init; } = "";
     }
+
+    sealed record GitHubReleaseInfo(Version? Version, Uri PageUri, bool IsPrerelease, string Notes);
 }

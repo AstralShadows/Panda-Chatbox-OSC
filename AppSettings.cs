@@ -35,6 +35,7 @@ public class AppSettings
     public bool TrimToLimit { get; set; } = true;     // cut text at 144 characters before sending
     public bool ShowSplash { get; set; } = true;      // startup screen
     public bool SuppressUpdateNotifications { get; set; }
+    public string LastSeenChangelogVersion { get; set; } = "";
     public bool OnboardingCompleted { get; set; } = true;
     int _uiScale = 100;
     public int UiScale

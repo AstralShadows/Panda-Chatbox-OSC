@@ -13,6 +13,7 @@ it has full spotify support using windows media manager has fun features like PC
 - Keyboard shortcuts: `Ctrl+1` through `Ctrl+4` switch tabs; `Ctrl+Shift+P` pauses/resumes sending. Tab and Shift+Tab navigate controls.
 - Interface scaling at 80%, 100%, 120%, or 140%.
 - Status template helper with token insertion, a live example preview, and 144-character feedback.
+- A changelog popup shows the notes for each newly installed version once, with a link to its GitHub release.
 - Automatic status collections from foreground apps and scheduled time ranges. Schedules can be restricted to weekdays and assigned priorities. Manual profile selection overrides automation; schedules take precedence over app matches; equal-priority rules use list order (app rules prefer the most-specific match).
 
 ## Build
