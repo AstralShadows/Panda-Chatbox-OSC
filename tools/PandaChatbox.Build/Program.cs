@@ -1,8 +1,10 @@
 using System.Diagnostics;
 
 const string ProjectFile = "PandaChatbox.csproj";
-const string InstallerFile = "PandaChatbox.iss";
 const string RuntimeIdentifier = "win-x64";
+const string InstallerSourceDirectory = "PandaChatbox.Installer";
+const string InstallerSourceFile = "Installer.cpp";
+const string InstallerOutputFile = "PandaChatbox-Setup.exe";
 
 var projectDirectory = FindProjectDirectory();
 if (projectDirectory is null)
@@ -43,8 +45,7 @@ static string? FindProjectDirectory()
         var directory = new DirectoryInfo(start);
         while (directory is not null)
         {
-            if (File.Exists(Path.Combine(directory.FullName, ProjectFile))
-                && File.Exists(Path.Combine(directory.FullName, InstallerFile)))
+            if (File.Exists(Path.Combine(directory.FullName, ProjectFile)))
             {
                 return directory.FullName;
             }
@@ -80,21 +81,45 @@ static int BuildInstaller(string projectDirectory, string projectPath)
         return publishResult;
     }
 
-    var compiler = FindInnoSetupCompiler();
-    if (compiler is null)
+    var installerSourcePath = Path.Combine(projectDirectory, "tools", InstallerSourceDirectory, InstallerSourceFile);
+    var installerOutputPath = Path.Combine(projectDirectory, "installer-output", InstallerOutputFile);
+
+    if (!File.Exists(installerSourcePath))
     {
-        Console.Error.WriteLine("Inno Setup 6 was not found. Install it from https://jrsoftware.org/isinfo.php and retry.");
+        Console.Error.WriteLine($"C++ installer source is missing: {installerSourcePath}");
         return 1;
     }
 
-    Console.WriteLine("Creating the Panda Chatbox installer...");
-    var result = RunProcess(projectDirectory, compiler, Path.Combine(projectDirectory, InstallerFile));
+    var compiler = FindVisualCppCompiler();
+    if (compiler is null)
+    {
+        Console.Error.WriteLine("A Visual Studio C++ toolchain was not found. Install 'Desktop development with C++' from Visual Studio 2022 Build Tools and retry.");
+        return 1;
+    }
+
+    var outputDirectory = Path.GetDirectoryName(installerOutputPath)!;
+    Directory.CreateDirectory(outputDirectory);
+
+    Console.WriteLine("Creating the Panda Chatbox installer with the native C++ bootstrapper...");
+    var result = CompileInstaller(compiler, installerSourcePath, installerOutputPath);
     if (result == 0)
     {
-        Console.WriteLine($"Installer created: {Path.Combine(projectDirectory, "installer-output", "PandaChatbox-Setup.exe")}");
+        Console.WriteLine($"Installer created: {installerOutputPath}");
     }
 
     return result;
+}
+
+static int CompileInstaller(string vcVarsPath, string sourceCodePath, string outputPath)
+{
+    var command = "cmd.exe";
+    var arguments = new[]
+    {
+        "/c",
+        $"\"{vcVarsPath}\" && cl /nologo /std:c++20 /EHsc /DUNICODE /D_UNICODE /O2 \"{sourceCodePath}\" /Fe\"{outputPath}\" /link shell32.lib shlwapi.lib ole32.lib user32.lib /OUT:\"{outputPath}\""
+    };
+
+    return RunProcess(Path.GetDirectoryName(sourceCodePath)!, command, arguments);
 }
 
 static int RunDotnet(string workingDirectory, params string[] arguments) =>
@@ -110,7 +135,10 @@ static int RunProcess(string workingDirectory, string executable, params string[
 
     foreach (var argument in arguments)
     {
-        startInfo.ArgumentList.Add(argument);
+        if (argument is not null)
+        {
+            startInfo.ArgumentList.Add(argument);
+        }
     }
 
     try
@@ -132,16 +160,73 @@ static int RunProcess(string workingDirectory, string executable, params string[
     }
 }
 
-static string? FindInnoSetupCompiler()
+static string? FindVisualCppCompiler()
 {
-    var candidates = new[]
+    var vswherePath = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86),
+        "Microsoft Visual Studio",
+        "Installer",
+        "vswhere.exe");
+
+    if (!File.Exists(vswherePath))
     {
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Programs", "Inno Setup 6", "ISCC.exe"),
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "Inno Setup 6", "ISCC.exe"),
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Inno Setup 6", "ISCC.exe")
+        vswherePath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+            "Microsoft Visual Studio",
+            "Installer",
+            "vswhere.exe");
+    }
+
+    if (File.Exists(vswherePath))
+    {
+        var result = RunVswhere(vswherePath);
+        if (result is not null)
+        {
+            var vcVars = Path.Combine(result, "VC", "Auxiliary", "Build", "vcvars64.bat");
+            if (File.Exists(vcVars))
+            {
+                return vcVars;
+            }
+        }
+    }
+
+    var literalCandidates = new[]
+    {
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Microsoft Visual Studio", "2022", "Enterprise", "VC", "Auxiliary", "Build", "vcvars64.bat"),
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Microsoft Visual Studio", "2022", "BuildTools", "VC", "Auxiliary", "Build", "vcvars64.bat"),
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "Microsoft Visual Studio", "2022", "Enterprise", "VC", "Auxiliary", "Build", "vcvars64.bat"),
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "Microsoft Visual Studio", "2022", "BuildTools", "VC", "Auxiliary", "Build", "vcvars64.bat")
     };
 
-    return candidates.FirstOrDefault(File.Exists);
+    return literalCandidates.FirstOrDefault(File.Exists);
+}
+
+static string? RunVswhere(string vswherePath)
+{
+    var startInfo = new ProcessStartInfo(vswherePath)
+    {
+        Arguments = "-latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath",
+        RedirectStandardOutput = true,
+        UseShellExecute = false,
+        CreateNoWindow = true
+    };
+
+    try
+    {
+        using var process = Process.Start(startInfo);
+        if (process is null)
+        {
+            return null;
+        }
+
+        var output = process.StandardOutput.ReadToEnd();
+        process.WaitForExit();
+        return process.ExitCode == 0 && !string.IsNullOrWhiteSpace(output) ? output.Trim() : null;
+    }
+    catch
+    {
+        return null;
+    }
 }
 
 static void PrintUsage()
@@ -156,6 +241,6 @@ static void PrintUsage()
           build      Build the app for development
           run        Run the app
           publish    Publish a self-contained single-file Windows app
-          installer  Publish the app and compile the Windows installer
+          installer  Publish the app and compile the native C++ installer
         """);
 }
