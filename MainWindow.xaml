@@ -87,7 +87,11 @@
                         <TextBlock Text="VRC OSC" FontSize="12.5" Foreground="{DynamicResource Pink}"/>
                         <TextBlock Text="Made by AstralShadows" FontSize="12.5" Foreground="{DynamicResource Lilac}" Margin="10,0,0,0"/>
                     </StackPanel>
-                    <TextBlock Text="Panda Chatbox" FontSize="26" FontWeight="Bold" Margin="0,-3,0,0"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,-3,0,0">
+                        <TextBlock Text="Panda Chatbox" FontSize="26" FontWeight="Bold"/>
+                        <TextBlock Text=":3" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource Pink}"
+                                   VerticalAlignment="Center" Margin="8,2,0,0"/>
+                    </StackPanel>
                 </StackPanel>
 
                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
