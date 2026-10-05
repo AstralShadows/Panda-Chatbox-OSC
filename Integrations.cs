@@ -18,8 +18,6 @@ internal static class Native
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] public static extern int GetWindowText(IntPtr hwnd, StringBuilder text, int max);
     [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr hwnd);
     [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr hwnd, out uint pid);
-    [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
-
     [StructLayout(LayoutKind.Sequential)]
     public struct SYSTEM_POWER_STATUS
     {
@@ -30,7 +28,8 @@ internal static class Native
         public int BatteryLifeTime;
         public int BatteryFullLifeTime;
     }
-    [DllImport("kernel32.dll")] public static extern bool GetSystemPowerStatus(out SYSTEM_POWER_STATUS status);
+    public static bool GetSystemPowerStatus(out SYSTEM_POWER_STATUS status) =>
+        NativeInterop.TryGetBatteryStatus(out status);
 }
 
 internal record WinInfo(string Exe, string Title, bool Visible);
@@ -64,24 +63,7 @@ internal static class Desktop
         => ForegroundWindow()?.AppName;
 
     public static ForegroundWindowInfo? ForegroundWindow()
-    {
-        IntPtr h = Native.GetForegroundWindow();
-        if (h == IntPtr.Zero) return null;
-        Native.GetWindowThreadProcessId(h, out uint pid);
-        if (pid == Environment.ProcessId) return null;   // ignore ourselves
-        try
-        {
-            string processName = Process.GetProcessById((int)pid).ProcessName;
-            if (processName.Length == 0) return null;
-            var title = new StringBuilder(512);
-            Native.GetWindowText(h, title, title.Capacity);
-            return new ForegroundWindowInfo(
-                char.ToUpperInvariant(processName[0]) + processName[1..],
-                processName + ".exe",
-                title.ToString());
-        }
-        catch { return null; }
-    }
+        => NativeInterop.GetForegroundWindow();
 }
 
 /// <summary>Weather from wttr.in (no API key needed).</summary>

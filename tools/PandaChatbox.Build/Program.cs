@@ -2,8 +2,7 @@ using System.Diagnostics;
 
 const string ProjectFile = "PandaChatbox.csproj";
 const string RuntimeIdentifier = "win-x64";
-const string InstallerSourceDirectory = "PandaChatbox.Installer";
-const string InstallerSourceFile = "Installer.cpp";
+const string InstallerScriptFile = "PandaChatbox.iss";
 const string InstallerOutputFile = "PandaChatbox-Setup.exe";
 
 var projectDirectory = FindProjectDirectory();
@@ -59,7 +58,7 @@ static string? FindProjectDirectory()
 
 static int Publish(string projectDirectory, string projectPath)
 {
-    Console.WriteLine("Publishing Panda Chatbox V3.4.2 as a self-contained single-file app...");
+    Console.WriteLine("Publishing Panda Chatbox V3.5.0 as a self-contained single-file app...");
     return RunDotnet(
         projectDirectory,
         "publish",
@@ -74,6 +73,34 @@ static int Publish(string projectDirectory, string projectPath)
 
 static int BuildInstaller(string projectDirectory, string projectPath)
 {
+    var installerScriptPath = Path.Combine(projectDirectory, InstallerScriptFile);
+    var installerOutputPath = Path.Combine(projectDirectory, "installer-output", InstallerOutputFile);
+
+    if (!File.Exists(installerScriptPath))
+    {
+        Console.Error.WriteLine($"Inno Setup script is missing: {installerScriptPath}");
+        return 1;
+    }
+
+    var compiler = FindInnoSetupCompiler();
+    if (compiler is null)
+    {
+        Console.Error.WriteLine("Inno Setup 6 was not found. Install Inno Setup 6 or set INNO_SETUP_COMPILER to the full path to ISCC.exe, then retry.");
+        return 1;
+    }
+
+    if (FindVisualCppCompiler() is null)
+    {
+        Console.Error.WriteLine("A Visual Studio C++ toolchain was not found. Install 'Desktop development with C++' from Visual Studio 2022 Build Tools and retry.");
+        return 1;
+    }
+
+    if (FindWindowsSdkHeaders() is null)
+    {
+        Console.Error.WriteLine("The Windows SDK was not found. In Visual Studio Installer, install a Windows 10 or Windows 11 SDK component, then retry.");
+        return 1;
+    }
+
     var publishResult = Publish(projectDirectory, projectPath);
     if (publishResult != 0)
     {
@@ -81,45 +108,15 @@ static int BuildInstaller(string projectDirectory, string projectPath)
         return publishResult;
     }
 
-    var installerSourcePath = Path.Combine(projectDirectory, "tools", InstallerSourceDirectory, InstallerSourceFile);
-    var installerOutputPath = Path.Combine(projectDirectory, "installer-output", InstallerOutputFile);
-
-    if (!File.Exists(installerSourcePath))
-    {
-        Console.Error.WriteLine($"C++ installer source is missing: {installerSourcePath}");
-        return 1;
-    }
-
-    var compiler = FindVisualCppCompiler();
-    if (compiler is null)
-    {
-        Console.Error.WriteLine("A Visual Studio C++ toolchain was not found. Install 'Desktop development with C++' from Visual Studio 2022 Build Tools and retry.");
-        return 1;
-    }
-
     var outputDirectory = Path.GetDirectoryName(installerOutputPath)!;
     Directory.CreateDirectory(outputDirectory);
-
-    Console.WriteLine("Creating the Panda Chatbox installer with the native C++ bootstrapper...");
-    var result = CompileInstaller(compiler, installerSourcePath, installerOutputPath);
+    Console.WriteLine("Compiling the Inno Setup installer...");
+    var result = RunProcess(projectDirectory, compiler, installerScriptPath);
     if (result == 0)
     {
         Console.WriteLine($"Installer created: {installerOutputPath}");
     }
-
     return result;
-}
-
-static int CompileInstaller(string vcVarsPath, string sourceCodePath, string outputPath)
-{
-    var command = "cmd.exe";
-    var arguments = new[]
-    {
-        "/c",
-        $"\"{vcVarsPath}\" && cl /nologo /std:c++20 /EHsc /DUNICODE /D_UNICODE /O2 \"{sourceCodePath}\" /Fe\"{outputPath}\" /link shell32.lib shlwapi.lib ole32.lib user32.lib /OUT:\"{outputPath}\""
-    };
-
-    return RunProcess(Path.GetDirectoryName(sourceCodePath)!, command, arguments);
 }
 
 static int RunDotnet(string workingDirectory, params string[] arguments) =>
@@ -141,12 +138,17 @@ static int RunProcess(string workingDirectory, string executable, params string[
         }
     }
 
+    return RunStartedProcess(startInfo);
+}
+
+static int RunStartedProcess(ProcessStartInfo startInfo)
+{
     try
     {
         using var process = Process.Start(startInfo);
         if (process is null)
         {
-            Console.Error.WriteLine($"Could not start: {executable}");
+            Console.Error.WriteLine($"Could not start: {startInfo.FileName}");
             return 1;
         }
 
@@ -155,7 +157,7 @@ static int RunProcess(string workingDirectory, string executable, params string[
     }
     catch (Exception exception) when (exception is InvalidOperationException or System.ComponentModel.Win32Exception)
     {
-        Console.Error.WriteLine($"Could not run {executable}: {exception.Message}");
+        Console.Error.WriteLine($"Could not run {startInfo.FileName}: {exception.Message}");
         return 1;
     }
 }
@@ -201,6 +203,79 @@ static string? FindVisualCppCompiler()
     return literalCandidates.FirstOrDefault(File.Exists);
 }
 
+static string? FindInnoSetupCompiler()
+{
+    var configuredPath = Environment.GetEnvironmentVariable("INNO_SETUP_COMPILER");
+    if (!string.IsNullOrWhiteSpace(configuredPath) && File.Exists(configuredPath))
+    {
+        return configuredPath;
+    }
+
+    var candidates = new List<string>
+    {
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "Inno Setup 6", "ISCC.exe"),
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "Inno Setup 6", "ISCC.exe"),
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Programs", "Inno Setup 6", "ISCC.exe")
+    };
+
+    using var uninstallKey = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(
+        @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall");
+    if (uninstallKey is not null)
+    {
+        foreach (var subKeyName in uninstallKey.GetSubKeyNames())
+        {
+            using var appKey = uninstallKey.OpenSubKey(subKeyName);
+            if (appKey?.GetValue("DisplayName") is not string displayName
+                || !displayName.Contains("Inno Setup", StringComparison.OrdinalIgnoreCase)
+                || !displayName.Contains("6", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            if (appKey.GetValue("InstallLocation") is string installLocation
+                && !string.IsNullOrWhiteSpace(installLocation))
+            {
+                candidates.Add(Path.Combine(installLocation, "ISCC.exe"));
+            }
+
+            if (appKey.GetValue("DisplayIcon") is string displayIcon
+                && !string.IsNullOrWhiteSpace(displayIcon))
+            {
+                var iconPath = displayIcon.Trim().Trim('"');
+                if (iconPath.Contains(','))
+                {
+                    iconPath = iconPath[..iconPath.LastIndexOf(',')].Trim().Trim('"');
+                }
+
+                var directory = Path.GetDirectoryName(iconPath);
+                if (directory is not null)
+                {
+                    candidates.Add(Path.Combine(directory, "ISCC.exe"));
+                }
+            }
+        }
+    }
+
+    return candidates.FirstOrDefault(File.Exists);
+}
+
+static string? FindWindowsSdkHeaders()
+{
+    var sdkIncludeDirectory = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86),
+        "Windows Kits",
+        "10",
+        "Include");
+
+    if (!Directory.Exists(sdkIncludeDirectory))
+    {
+        return null;
+    }
+
+    return Directory.GetDirectories(sdkIncludeDirectory)
+        .FirstOrDefault(versionDirectory => File.Exists(Path.Combine(versionDirectory, "um", "Windows.h")));
+}
+
 static string? RunVswhere(string vswherePath)
 {
     var startInfo = new ProcessStartInfo(vswherePath)
@@ -241,6 +316,6 @@ static void PrintUsage()
           build      Build the app for development
           run        Run the app
           publish    Publish a self-contained single-file Windows app
-          installer  Publish the app and compile the native C++ installer
+          installer  Publish the app and compile the Inno Setup installer
         """);
 }

@@ -108,62 +108,25 @@ public sealed class Engine
 
     void SendText(string t)
     {
-        if (Cfg.TrimToLimit) t = Trim(t);
+        if (Cfg.TrimToLimit) t = NativeInterop.TrimChatText(t, ChatboxLimit);
         _lastSend = Now;
         Osc.Send(t, Cfg.Immediate, Cfg.Sound);
-    }
-
-    static string Trim(string t)
-    {
-        if (t.Length <= ChatboxLimit) return t;
-        int n = ChatboxLimit;
-        if (char.IsHighSurrogate(t[n - 1])) n--;   // don't cut an emoji in half
-        return t[..n];
     }
 
     // ---------- status messages ----------
     static bool Usable(StatusItem m) => m.Enabled && m.Text.Trim().Length > 0;
 
-    List<StatusItem> StatusPool()
-    {
-        var pool = Messages.Where(Usable)
-            .Where(message => _activeCollection == null
-                || string.Equals(message.Collection, _activeCollection, StringComparison.OrdinalIgnoreCase))
-            .ToList();
-
-        if (Cfg.StatusMode == 2)
-        {
-            var favorites = pool.Where(message => message.Favorite).ToList();
-            if (favorites.Count > 0) pool = favorites;
-        }
-
-        return pool;
-    }
-
     /// <summary>Moves to the next status according to the rotation mode (in order / random / favorites only).</summary>
     public void PickStatus()
     {
-        var pool = StatusPool();
-
-        StatusItem? next = null;
-        if (pool.Count > 0)
-        {
-            if (Cfg.StatusMode == 1 && pool.Count > 1)
-            {
-                do next = pool[_rng.Next(pool.Count)]; while (next == _current);
-            }
-            else
-            {
-                // in order: first usable message after the current one (wraps around)
-                int start = _current == null ? -1 : Messages.IndexOf(_current);
-                for (int k = 1; k <= Messages.Count && next == null; k++)
-                {
-                    var cand = Messages[(start + k) % Messages.Count];
-                    if (pool.Contains(cand)) next = cand;
-                }
-                next ??= pool[0];
-            }
-        }
+        var flags = Messages.Select(message =>
+            (message.Enabled ? 1 : 0) |
+            (message.Text.Trim().Length > 0 ? 2 : 0) |
+            (message.Favorite ? 4 : 0)).ToArray();
+        var collections = Messages.Select(message => message.Collection).ToArray();
+        var currentIndex = _current is null ? -1 : Messages.IndexOf(_current);
+        var nextIndex = NativeInterop.PickStatus(Cfg.StatusMode, flags, collections, _activeCollection, currentIndex, _rng.Next());
+        StatusItem? next = nextIndex < 0 ? null : Messages[nextIndex];
         SetCurrent(next);
     }
 
@@ -176,8 +139,13 @@ public sealed class Engine
 
     bool CurrentValid()
     {
-        var c = _current;
-        return c != null && StatusPool().Contains(c);
+        if (_current is null || !Usable(_current)
+            || (_activeCollection != null && !string.Equals(_current.Collection, _activeCollection, StringComparison.OrdinalIgnoreCase)))
+            return false;
+        if (Cfg.StatusMode != 2 || _current.Favorite)
+            return true;
+        return !Messages.Any(message => Usable(message) && message.Favorite
+            && (_activeCollection == null || string.Equals(message.Collection, _activeCollection, StringComparison.OrdinalIgnoreCase)));
     }
 
     /// <summary>Call after the list or a row changes (delete, power, heart, edit, mode change).</summary>
@@ -462,24 +430,8 @@ public sealed class Engine
             entries.Add(("VRAM", Tagged(Cfg.TagVram, usage)));
         }
 
-        var result = new List<string>();
         var order = (Cfg.DisplayLineOrder?.Count > 0 ? Cfg.DisplayLineOrder : AppSettings.DefaultDisplayLineOrder()).ToList();
-        foreach (var key in order)
-        {
-            var match = entries.FirstOrDefault(entry => string.Equals(entry.Key, key, StringComparison.OrdinalIgnoreCase));
-            if (match.Text is { Length: > 0 } text)
-            {
-                result.Add(text);
-            }
-        }
-
-        foreach (var entry in entries)
-        {
-            if (result.Contains(entry.Text, StringComparer.Ordinal)) continue;
-            result.Add(entry.Text);
-        }
-
-        return string.Join("\n", result);
+        return NativeInterop.ComposeLines(entries.ToArray(), order.ToArray());
     }
 
     IEnumerable<(string Key, string Text)> BuildIntegrationEntries(string sep)

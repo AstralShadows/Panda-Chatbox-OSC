@@ -1,7 +1,6 @@
 using System;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
-using System.Text;
 using System.Text.Json.Serialization;
 
 namespace PandaChatbox;
@@ -86,36 +85,5 @@ public static class StatusStyles
 {
     public static readonly string[] Names = { "Default", "UPPERCASE", "lowercase", "Wide", "Small caps", "Sparkles" };
 
-    // a-z as small capitals (all in the basic multilingual plane)
-    const string Small =
-        "\u1D00\u0299\u1D04\u1D05\u1D07\uA730\u0262\u029C\u026A\u1D0A\u1D0B\u029F\u1D0D\u0274\u1D0F\u1D18\u01EB\u0280\uA731\u1D1B\u1D1C\u1D20\u1D21x\u028F\u1D22";
-
-    public static string Apply(int style, string t) => style switch
-    {
-        1 => t.ToUpperInvariant(),
-        2 => t.ToLowerInvariant(),
-        3 => Wide(t),
-        4 => SmallCaps(t),
-        5 => "\u2728 " + t + " \u2728",
-        _ => t,
-    };
-
-    static string Wide(string t)
-    {
-        var sb = new StringBuilder(t.Length);
-        foreach (char c in t)
-            sb.Append(c == ' ' ? '\u3000' : c >= '!' && c <= '~' ? (char)(c - '!' + 0xFF01) : c);
-        return sb.ToString();
-    }
-
-    static string SmallCaps(string t)
-    {
-        var sb = new StringBuilder(t.Length);
-        foreach (char c in t)
-        {
-            char l = char.ToLowerInvariant(c);
-            sb.Append(l >= 'a' && l <= 'z' ? Small[l - 'a'] : c);
-        }
-        return sb.ToString();
-    }
+    public static string Apply(int style, string text) => NativeInterop.ApplyStatusStyle(style, text);
 }

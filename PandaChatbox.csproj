@@ -9,7 +9,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>PandaChatbox</AssemblyName>
     <RootNamespace>PandaChatbox</RootNamespace>
-    <Version>3.4.2</Version>
+    <Version>3.5.0</Version>
     <ApplicationIcon>favicon.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
@@ -17,6 +17,16 @@
   <ItemGroup>
     <Resource Include="favicon.ico" />
     <Compile Remove="tools\**\*.cs" />
+    <Content Include="$(BaseIntermediateOutputPath)$(Configuration)\$(TargetFramework)\native\PandaChatbox.Native.dll"
+             Condition="'$(SkipNativeBuild)' != 'true'"
+             Link="PandaChatbox.Native.dll"
+             CopyToOutputDirectory="PreserveNewest"
+             CopyToPublishDirectory="PreserveNewest"
+             ExcludeFromSingleFile="true" />
   </ItemGroup>
+
+  <Target Name="BuildPandaChatboxNative" BeforeTargets="PrepareForBuild" Condition="'$(SkipNativeBuild)' != 'true' and '$(DesignTimeBuild)' != 'true'">
+    <Exec Command="&quot;$(MSBuildProjectDirectory)\tools\PandaChatbox.Native\build.cmd&quot; &quot;$(MSBuildProjectDirectory)&quot; &quot;$(MSBuildProjectDirectory)\$(BaseIntermediateOutputPath)$(Configuration)\$(TargetFramework)\native&quot;" />
+  </Target>
 
 </Project>
