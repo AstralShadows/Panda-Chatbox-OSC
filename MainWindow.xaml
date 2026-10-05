@@ -308,20 +308,56 @@
                                 <TextBlock Style="{StaticResource CardTitle}" Text="Chatbox integrations"/>
                                 <TextBlock Style="{StaticResource MutedText}" Margin="0,3,0,12"
                                            Text="Turn chatbox content on or off here. Detailed formatting, labels, and service options stay in Settings."/>
-                                <UniformGrid Columns="2">
-                                    <CheckBox Content="Status rotation" IsChecked="{Binding ShowStatus}" Margin="4,6" Click="IntegrationToggle_Click"/>
-                                    <CheckBox Content="CPU usage" IsChecked="{Binding ShowCpu}" Margin="4,6" Click="IntegrationToggle_Click"/>
-                                    <CheckBox Content="RAM usage" IsChecked="{Binding ShowRam}" Margin="4,6" Click="IntegrationToggle_Click"/>
-                                    <CheckBox Content="GPU name" IsChecked="{Binding ShowGpu}" Margin="4,6" Click="IntegrationToggle_Click"/>
-                                    <CheckBox Content="VRAM usage" IsChecked="{Binding ShowVram}" Margin="4,6" Click="IntegrationToggle_Click"/>
-                                    <CheckBox Content="Time" IsChecked="{Binding ShowTime}" Margin="4,6" Click="IntegrationToggle_Click"/>
-                                    <CheckBox Content="Date" IsChecked="{Binding ShowDate}" Margin="4,6" Click="IntegrationToggle_Click"/>
-                                    <CheckBox Content="Weather" IsChecked="{Binding ShowWeather}" Margin="4,6" Click="IntegrationToggle_Click"/>
-                                    <CheckBox Content="Now playing" IsChecked="{Binding ShowMedia}" Margin="4,6" Click="IntegrationToggle_Click"/>
-                                    <CheckBox Content="Foreground app" IsChecked="{Binding ShowApp}" Margin="4,6" Click="IntegrationToggle_Click"/>
-                                    <CheckBox Content="Battery" IsChecked="{Binding ShowBattery}" Margin="4,6" Click="IntegrationToggle_Click"/>
-                                    <CheckBox Content="PC uptime" IsChecked="{Binding ShowUptime}" Margin="4,6" Click="IntegrationToggle_Click"/>
-                                </UniformGrid>
+                                <StackPanel>
+                                    <DockPanel Margin="4,7">
+                                        <ToggleButton DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="{Binding ShowStatus}" Click="IntegrationToggle_Click"/>
+                                        <TextBlock Style="{StaticResource RowLabel}" Text="Status rotation"/>
+                                    </DockPanel>
+                                    <DockPanel Margin="4,7">
+                                        <ToggleButton DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="{Binding ShowCpu}" Click="IntegrationToggle_Click"/>
+                                        <TextBlock Style="{StaticResource RowLabel}" Text="CPU usage"/>
+                                    </DockPanel>
+                                    <DockPanel Margin="4,7">
+                                        <ToggleButton DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="{Binding ShowRam}" Click="IntegrationToggle_Click"/>
+                                        <TextBlock Style="{StaticResource RowLabel}" Text="RAM usage"/>
+                                    </DockPanel>
+                                    <DockPanel Margin="4,7">
+                                        <ToggleButton DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="{Binding ShowGpu}" Click="IntegrationToggle_Click"/>
+                                        <TextBlock Style="{StaticResource RowLabel}" Text="GPU name"/>
+                                    </DockPanel>
+                                    <DockPanel Margin="4,7">
+                                        <ToggleButton DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="{Binding ShowVram}" Click="IntegrationToggle_Click"/>
+                                        <TextBlock Style="{StaticResource RowLabel}" Text="VRAM usage"/>
+                                    </DockPanel>
+                                    <DockPanel Margin="4,7">
+                                        <ToggleButton DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="{Binding ShowTime}" Click="IntegrationToggle_Click"/>
+                                        <TextBlock Style="{StaticResource RowLabel}" Text="Time"/>
+                                    </DockPanel>
+                                    <DockPanel Margin="4,7">
+                                        <ToggleButton DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="{Binding ShowDate}" Click="IntegrationToggle_Click"/>
+                                        <TextBlock Style="{StaticResource RowLabel}" Text="Date"/>
+                                    </DockPanel>
+                                    <DockPanel Margin="4,7">
+                                        <ToggleButton DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="{Binding ShowWeather}" Click="IntegrationToggle_Click"/>
+                                        <TextBlock Style="{StaticResource RowLabel}" Text="Weather"/>
+                                    </DockPanel>
+                                    <DockPanel Margin="4,7">
+                                        <ToggleButton DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="{Binding ShowMedia}" Click="IntegrationToggle_Click"/>
+                                        <TextBlock Style="{StaticResource RowLabel}" Text="Now playing"/>
+                                    </DockPanel>
+                                    <DockPanel Margin="4,7">
+                                        <ToggleButton DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="{Binding ShowApp}" Click="IntegrationToggle_Click"/>
+                                        <TextBlock Style="{StaticResource RowLabel}" Text="Foreground app"/>
+                                    </DockPanel>
+                                    <DockPanel Margin="4,7">
+                                        <ToggleButton DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="{Binding ShowBattery}" Click="IntegrationToggle_Click"/>
+                                        <TextBlock Style="{StaticResource RowLabel}" Text="Battery"/>
+                                    </DockPanel>
+                                    <DockPanel Margin="4,7">
+                                        <ToggleButton DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="{Binding ShowUptime}" Click="IntegrationToggle_Click"/>
+                                        <TextBlock Style="{StaticResource RowLabel}" Text="PC uptime"/>
+                                    </DockPanel>
+                                </StackPanel>
                             </StackPanel>
                         </Border>
                         <Border Style="{StaticResource CardBox}">
@@ -329,11 +365,20 @@
                                 <TextBlock Style="{StaticResource CardTitle}" Text="Media sources"/>
                                 <TextBlock Style="{StaticResource MutedText}" Margin="0,3,0,8"
                                            Text="Choose which players are included when Now playing is enabled or referenced by a status template."/>
-                                <UniformGrid Columns="3">
-                                    <CheckBox Content="Spotify" IsChecked="{Binding MediaSpotify}" Margin="4,6" Click="IntegrationToggle_Click"/>
-                                    <CheckBox Content="YouTube" IsChecked="{Binding MediaYoutube}" Margin="4,6" Click="IntegrationToggle_Click"/>
-                                    <CheckBox Content="Other players" IsChecked="{Binding MediaOther}" Margin="4,6" Click="IntegrationToggle_Click"/>
-                                </UniformGrid>
+                                <StackPanel>
+                                    <DockPanel Margin="4,7">
+                                        <ToggleButton DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="{Binding MediaSpotify}" Click="IntegrationToggle_Click"/>
+                                        <TextBlock Style="{StaticResource RowLabel}" Text="Spotify"/>
+                                    </DockPanel>
+                                    <DockPanel Margin="4,7">
+                                        <ToggleButton DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="{Binding MediaYoutube}" Click="IntegrationToggle_Click"/>
+                                        <TextBlock Style="{StaticResource RowLabel}" Text="YouTube"/>
+                                    </DockPanel>
+                                    <DockPanel Margin="4,7">
+                                        <ToggleButton DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="{Binding MediaOther}" Click="IntegrationToggle_Click"/>
+                                        <TextBlock Style="{StaticResource RowLabel}" Text="Other players"/>
+                                    </DockPanel>
+                                </StackPanel>
                             </StackPanel>
                         </Border>
                     </StackPanel>
