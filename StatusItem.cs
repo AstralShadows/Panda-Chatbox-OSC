@@ -12,7 +12,7 @@ namespace PandaChatbox;
 /// </summary>
 public class StatusItem : INotifyPropertyChanged
 {
-    string _text = "";
+    string _text = "", _collection = "Default";
     bool _enabled = true, _favorite, _editing, _current;
     int _styleIndex;
 
@@ -24,6 +24,18 @@ public class StatusItem : INotifyPropertyChanged
     {
         get => _text;
         set { value ??= ""; if (_text == value) return; _text = value; On(); }
+    }
+
+    public string Collection
+    {
+        get => _collection;
+        set
+        {
+            value = string.IsNullOrWhiteSpace(value) ? "Default" : value.Trim();
+            if (_collection == value) return;
+            _collection = value;
+            On();
+        }
     }
 
     /// <summary>Power button: is this message part of the rotation?</summary>

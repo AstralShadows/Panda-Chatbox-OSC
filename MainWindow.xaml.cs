@@ -24,6 +24,7 @@ public partial class MainWindow : Window
     UIElement[]? _pages;
     bool _begun;
     bool _updateCheckInProgress;
+    bool _updatingProfileUi;
     bool _updateAvailable;
     bool _openReleasePageOnClick;
     Uri? _latestReleaseUri;
@@ -42,8 +43,9 @@ public partial class MainWindow : Window
         InitializeComponent();
         DataContext = _cfg;
         TextColorBox.Text = _cfg.TextColor;
-        _pages = new UIElement[] { PageStatus, PageChat, PageSettings };
+        _pages = new UIElement[] { PageStatus, PageChat, PageIntegrations, PageSettings };
         StatusList.ItemsSource = _eng.Messages;
+        RefreshProfileUi();
         ApplyWindowChrome();
         UpdateBackgroundSettings();
 
@@ -276,6 +278,9 @@ public partial class MainWindow : Window
 
         WeatherStatusText.Text = _eng.WeatherStatus;
         MediaStatusText.Text = _eng.MediaStatus;
+        ActiveProfileText.Text = string.IsNullOrWhiteSpace(_cfg.ManualProfileName)
+            ? $"Automatic selection · {_eng.ActiveCollectionName}"
+            : $"Manual profile · {_cfg.ManualProfileName} · {_eng.ActiveCollectionName}";
 
         CpuDetectedText.Text = _eng.Hardware.CpuName;
         RamDetectedText.Text = $"{_eng.Hardware.UsedRamGb:0.##}/{Math.Ceiling(_eng.Hardware.TotalRamGb):0} GB used";
@@ -308,7 +313,7 @@ public partial class MainWindow : Window
     {
         string t = StatusEdit.Text.Trim();
         if (t.Length == 0) return;
-        _eng.Messages.Add(new StatusItem { Text = t });
+        _eng.Messages.Add(new StatusItem { Text = t, Collection = StatusCollectionEdit.Text });
         StatusEdit.Clear();
         _eng.StatusChanged();
         Dispatcher.BeginInvoke(new Action(() => StatusScroll.ScrollToEnd()), DispatcherPriority.Background);
@@ -325,6 +330,11 @@ public partial class MainWindow : Window
         int n = StatusEdit.Text.Length;
         Placeholder.Visibility = n == 0 ? Visibility.Visible : Visibility.Collapsed;
         CreateCount.Text = $"{n}/{Engine.ChatboxLimit}";
+    }
+
+    void Collection_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (IsLoaded) _eng.StatusChanged();
     }
 
     void ClearAll_Click(object sender, RoutedEventArgs e)
@@ -422,6 +432,297 @@ public partial class MainWindow : Window
     {
         if (!IsLoaded) return;
         _eng.StatusChanged();
+    }
+
+    void IntegrationToggle_Click(object sender, RoutedEventArgs e) => _eng.Kick();
+
+    void Profiles_CellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
+    {
+        Dispatcher.BeginInvoke(new Action(() =>
+        {
+            if (!string.IsNullOrWhiteSpace(_cfg.ManualProfileName)
+                && !_cfg.StatusProfiles.Any(profile => profile != null
+                    && string.Equals(profile.Name, _cfg.ManualProfileName, StringComparison.OrdinalIgnoreCase)))
+                _cfg.ManualProfileName = "";
+            foreach (var profile in _cfg.StatusProfiles.Where(profile => profile != null))
+            {
+                profile.Name = profile.Name?.Trim() ?? "";
+                profile.AppMatch = profile.AppMatch?.Trim() ?? "";
+                profile.Collection = string.IsNullOrWhiteSpace(profile.Collection) ? "Default" : profile.Collection.Trim();
+            }
+            RefreshProfileUi();
+            _eng.ConfigurationChanged();
+            SaveNow();
+        }), DispatcherPriority.Background);
+    }
+
+    void Schedules_CellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
+    {
+        Dispatcher.BeginInvoke(new Action(() =>
+        {
+            _eng.ConfigurationChanged();
+            SaveNow();
+        }), DispatcherPriority.Background);
+    }
+
+    void RefreshProfileUi()
+    {
+        if (ManualProfileCombo == null) return;
+        _updatingProfileUi = true;
+        var names = new List<string> { "Auto" };
+        names.AddRange(_cfg.StatusProfiles
+            .Where(profile => profile != null)
+            .Select(profile => profile.Name?.Trim() ?? "")
+            .Where(name => name.Length > 0)
+            .Distinct(StringComparer.OrdinalIgnoreCase));
+        if (!string.IsNullOrWhiteSpace(_cfg.ManualProfileName)
+            && !names.Any(name => string.Equals(name, _cfg.ManualProfileName, StringComparison.OrdinalIgnoreCase)))
+            _cfg.ManualProfileName = "";
+        ManualProfileCombo.ItemsSource = names;
+        string selected = names.FirstOrDefault(name =>
+            string.Equals(name, _cfg.ManualProfileName, StringComparison.OrdinalIgnoreCase)) ?? "Auto";
+        ManualProfileCombo.SelectedItem = selected;
+        _updatingProfileUi = false;
+    }
+
+    void ManualProfileCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_updatingProfileUi || !IsLoaded) return;
+        _cfg.ManualProfileName = string.Equals(ManualProfileCombo.SelectedItem as string, "Auto", StringComparison.OrdinalIgnoreCase)
+            ? ""
+            : ManualProfileCombo.SelectedItem as string ?? "";
+        _eng.ConfigurationChanged();
+        SaveNow();
+        RefreshUi();
+    }
+
+    void AddProfile_Click(object sender, RoutedEventArgs e)
+    {
+        string name = ProfileNameEdit.Text.Trim();
+        string collection = ProfileCollectionEdit.Text.Trim();
+        if (name.Length == 0 || collection.Length == 0)
+        {
+            MessageBox.Show(this, "Enter both a profile name and a collection name.", "Panda Chatbox",
+                MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+        if (string.Equals(name, "Auto", StringComparison.OrdinalIgnoreCase))
+        {
+            MessageBox.Show(this, "'Auto' is reserved for automatic profile selection.", "Panda Chatbox",
+                MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+        if (_cfg.StatusProfiles.Any(profile => profile != null
+            && string.Equals(profile.Name, name, StringComparison.OrdinalIgnoreCase)))
+        {
+            MessageBox.Show(this, "A profile with that name already exists.", "Panda Chatbox",
+                MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        _cfg.StatusProfiles.Add(new StatusProfile
+        {
+            Name = name,
+            AppMatch = ProfileAppEdit.Text.Trim(),
+            Collection = collection
+        });
+        ProfileNameEdit.Clear();
+        ProfileAppEdit.Clear();
+        RefreshProfileUi();
+        _eng.ConfigurationChanged();
+        SaveNow();
+    }
+
+    void RemoveProfile_Click(object sender, RoutedEventArgs e)
+    {
+        ProfilesGrid.CommitEdit(DataGridEditingUnit.Cell, true);
+        ProfilesGrid.CommitEdit(DataGridEditingUnit.Row, true);
+        if (ProfilesGrid.SelectedItem is not StatusProfile profile) return;
+        _cfg.StatusProfiles.Remove(profile);
+        if (string.Equals(_cfg.ManualProfileName, profile.Name, StringComparison.OrdinalIgnoreCase))
+            _cfg.ManualProfileName = "";
+        RefreshProfileUi();
+        _eng.ConfigurationChanged();
+        SaveNow();
+    }
+
+    void AddSchedule_Click(object sender, RoutedEventArgs e)
+    {
+        string name = ScheduleNameEdit.Text.Trim();
+        string collection = ScheduleCollectionEdit.Text.Trim();
+        bool validStart = TimeOnly.TryParseExact(ScheduleStartEdit.Text.Trim(), "HH:mm",
+            System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out _);
+        bool validEnd = TimeOnly.TryParseExact(ScheduleEndEdit.Text.Trim(), "HH:mm",
+            System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out _);
+        if (name.Length == 0 || collection.Length == 0 || !validStart || !validEnd)
+        {
+            MessageBox.Show(this, "Enter a schedule name and collection, with start and end times in 24-hour HH:mm format.", "Panda Chatbox",
+                MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+        if (string.Equals(ScheduleStartEdit.Text.Trim(), ScheduleEndEdit.Text.Trim(), StringComparison.Ordinal))
+        {
+            MessageBox.Show(this, "The start and end times must be different.", "Panda Chatbox",
+                MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        _cfg.ScheduledProfiles.Add(new ScheduledStatusProfile
+        {
+            Name = name,
+            StartTime = ScheduleStartEdit.Text.Trim(),
+            EndTime = ScheduleEndEdit.Text.Trim(),
+            Collection = collection
+        });
+        ScheduleNameEdit.Clear();
+        _eng.ConfigurationChanged();
+        SaveNow();
+    }
+
+    void RemoveSchedule_Click(object sender, RoutedEventArgs e)
+    {
+        SchedulesGrid.CommitEdit(DataGridEditingUnit.Cell, true);
+        SchedulesGrid.CommitEdit(DataGridEditingUnit.Row, true);
+        if (SchedulesGrid.SelectedItem is not ScheduledStatusProfile profile) return;
+        _cfg.ScheduledProfiles.Remove(profile);
+        _eng.ConfigurationChanged();
+        SaveNow();
+    }
+
+    void ExportSettings_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new SaveFileDialog
+        {
+            Title = "Export Panda Chatbox settings",
+            Filter = "Panda Chatbox backup (*.json)|*.json",
+            DefaultExt = ".json",
+            FileName = "Panda-Chatbox-Settings.json",
+            AddExtension = true,
+            OverwritePrompt = true
+        };
+        if (dialog.ShowDialog(this) != true) return;
+        try
+        {
+            SettingsStore.Export(dialog.FileName, _cfg, _eng.Messages);
+            MessageBox.Show(this, "Settings and statuses were exported successfully.", "Panda Chatbox",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or JsonException)
+        {
+            MessageBox.Show(this, "Settings could not be exported:\n\n" + exception.Message, "Panda Chatbox",
+                MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    void ImportSettings_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFileDialog
+        {
+            Title = "Import Panda Chatbox settings",
+            Filter = "Panda Chatbox backup (*.json)|*.json|All files|*.*",
+            CheckFileExists = true
+        };
+        if (dialog.ShowDialog(this) != true) return;
+        if (MessageBox.Show(this, "Importing replaces your current settings and status messages. Continue?",
+                "Panda Chatbox", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
+            return;
+
+        AppSettings? previousSettings = null;
+        List<StatusItem>? previousItems = null;
+        bool importStarted = false;
+        try
+        {
+            previousSettings = JsonSerializer.Deserialize<AppSettings>(JsonSerializer.Serialize(_cfg))
+                ?? throw new InvalidDataException("The current settings could not be backed up before import.");
+            previousItems = _eng.Messages.ToList();
+            SaveFile backup = SettingsStore.Import(dialog.FileName);
+            backup.Settings.StatusProfiles ??= new ObservableCollection<StatusProfile>();
+            backup.Settings.ScheduledProfiles ??= new ObservableCollection<ScheduledStatusProfile>();
+            backup.Settings.ManualProfileName ??= "";
+            backup.Items ??= new List<StatusItem>();
+            ValidateImport(backup);
+            ThemeManager.Apply(backup.Settings);
+            importStarted = true;
+            _cfg.CopyFrom(backup.Settings);
+            _eng.Messages.Clear();
+            foreach (var message in backup.Items) _eng.Messages.Add(message);
+            DataContext = null;
+            DataContext = _cfg;
+            TextColorBox.Text = _cfg.TextColor;
+            ApplyWindowChrome();
+            UpdateBackgroundSettings();
+            RefreshProfileUi();
+            _eng.ApplyConnection();
+            _eng.ConfigurationChanged();
+            SaveNow();
+            RefreshUi();
+            MessageBox.Show(this, "Settings and statuses were imported successfully.", "Panda Chatbox",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException
+                                           or JsonException or ArgumentException or InvalidDataException
+                                           or NotSupportedException or FormatException or InvalidOperationException)
+        {
+            string errorText = exception.Message;
+            if (importStarted && previousSettings != null && previousItems != null)
+            {
+                _cfg.CopyFrom(previousSettings);
+                _eng.Messages.Clear();
+                foreach (var message in previousItems) _eng.Messages.Add(message);
+                DataContext = null;
+                DataContext = _cfg;
+                TextColorBox.Text = _cfg.TextColor;
+                ApplyWindowChrome();
+                UpdateBackgroundSettings();
+                RefreshProfileUi();
+                _eng.ApplyConnection();
+                _eng.ConfigurationChanged();
+                SaveNow();
+            }
+            try
+            {
+                ThemeManager.Apply(_cfg);
+            }
+            catch (Exception restoreException) when (restoreException is IOException or ArgumentException
+                                                     or NotSupportedException or FormatException or InvalidOperationException)
+            {
+                errorText = new AggregateException(exception, restoreException).Message;
+            }
+            MessageBox.Show(this, "Settings could not be imported:\n\n" + errorText, "Panda Chatbox",
+                MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    static void ValidateImport(SaveFile backup)
+    {
+        if (backup.Items!.Any(item => item == null))
+            throw new InvalidDataException("The backup contains an empty status entry.");
+
+        var profiles = backup.Settings.StatusProfiles!;
+        if (profiles.Any(profile => profile == null
+                                    || string.IsNullOrWhiteSpace(profile.Name)
+                                    || string.Equals(profile.Name.Trim(), "Auto", StringComparison.OrdinalIgnoreCase)
+                                    || string.IsNullOrWhiteSpace(profile.Collection)))
+            throw new InvalidDataException("Every profile needs a unique name and a collection.");
+        if (profiles.Select(profile => profile.Name.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).Count() != profiles.Count)
+            throw new InvalidDataException("Profile names must be unique.");
+
+        foreach (var schedule in backup.Settings.ScheduledProfiles!)
+        {
+            if (schedule == null)
+                throw new InvalidDataException("The backup contains an empty schedule entry.");
+            bool validStart = TimeOnly.TryParseExact(schedule.StartTime, "HH:mm",
+                System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var start);
+            bool validEnd = TimeOnly.TryParseExact(schedule.EndTime, "HH:mm",
+                System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var end);
+            if (string.IsNullOrWhiteSpace(schedule.Name)
+                || string.IsNullOrWhiteSpace(schedule.Collection) || !validStart || !validEnd || start == end)
+                throw new InvalidDataException("Each schedule needs a name, collection, and distinct 24-hour HH:mm start/end times.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(backup.Settings.ManualProfileName)
+            && !profiles.Any(profile => string.Equals(profile.Name, backup.Settings.ManualProfileName, StringComparison.OrdinalIgnoreCase)))
+            backup.Settings.ManualProfileName = "";
     }
 
     void Theme_Changed(object sender, SelectionChangedEventArgs e)

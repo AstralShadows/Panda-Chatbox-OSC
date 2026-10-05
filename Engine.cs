@@ -24,11 +24,14 @@ public sealed class Engine
     public readonly OscClient Osc = new();
     public readonly WeatherService Weather = new();
     internal PcHardwareMonitor Hardware => _hardware;
+    public string ActiveCollectionName => _activeCollection ?? "All collections";
 
     // latest measured hardware usage
     StatusItem? _current;
     readonly PcHardwareMonitor _hardware = new();
     double _cpu, _ram;
+    string? _activeCollection;
+    string _foregroundApp = "", _foregroundExecutable = "", _foregroundTitle = "";
 
     // chat override
     string _overrideText = "";
@@ -46,13 +49,16 @@ public sealed class Engine
     // scheduling
     double _lastMsg, _lastHw, _lastSend;
     bool _kick, _force;
+    string _lastTemplateClock = "";
     readonly Random _rng = new();
 
     static double Now => Environment.TickCount64 / 1000.0;
-
     public Engine(AppSettings cfg, ObservableCollection<StatusItem> messages)
     {
         Cfg = cfg;
+        Cfg.StatusProfiles ??= new ObservableCollection<StatusProfile>();
+        Cfg.ScheduledProfiles ??= new ObservableCollection<ScheduledStatusProfile>();
+        Cfg.ManualProfileName ??= "";
         Messages = messages;
         _wCity = cfg.City;
         _wFahrenheit = cfg.Fahrenheit;
@@ -115,15 +121,26 @@ public sealed class Engine
     // ---------- status messages ----------
     static bool Usable(StatusItem m) => m.Enabled && m.Text.Trim().Length > 0;
 
+    List<StatusItem> StatusPool()
+    {
+        var pool = Messages.Where(Usable)
+            .Where(message => _activeCollection == null
+                || string.Equals(message.Collection, _activeCollection, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        if (Cfg.StatusMode == 2)
+        {
+            var favorites = pool.Where(message => message.Favorite).ToList();
+            if (favorites.Count > 0) pool = favorites;
+        }
+
+        return pool;
+    }
+
     /// <summary>Moves to the next status according to the rotation mode (in order / random / favorites only).</summary>
     public void PickStatus()
     {
-        var pool = Messages.Where(Usable).ToList();
-        if (Cfg.StatusMode == 2)
-        {
-            var fav = pool.Where(m => m.Favorite).ToList();
-            if (fav.Count > 0) pool = fav;   // no favorites yet? fall back to everything
-        }
+        var pool = StatusPool();
 
         StatusItem? next = null;
         if (pool.Count > 0)
@@ -157,23 +174,53 @@ public sealed class Engine
     bool CurrentValid()
     {
         var c = _current;
-        if (c == null || !Messages.Contains(c) || !Usable(c)) return false;
-        if (Cfg.StatusMode == 2 && !c.Favorite && Messages.Any(m => Usable(m) && m.Favorite)) return false;
-        return true;
+        return c != null && StatusPool().Contains(c);
     }
 
     /// <summary>Call after the list or a row changes (delete, power, heart, edit, mode change).</summary>
     public void StatusChanged()
     {
-        if (CurrentValid()) return;
-        PickStatus();
+        if (!CurrentValid()) PickStatus();
         _force = true;
     }
 
     string StatusLine()
     {
         if (_current == null) return "[No Status Active]";
-        return Cfg.StatusPrefix + StatusStyles.Apply(_current.StyleIndex, _current.Text) + Cfg.StatusSuffix;
+        string text = StatusTemplate.Expand(_current.Text, TemplateValues());
+        return Cfg.StatusPrefix + StatusStyles.Apply(_current.StyleIndex, text) + Cfg.StatusSuffix;
+    }
+
+    Dictionary<string, string> TemplateValues()
+    {
+        var now = DateTime.Now;
+        string timeFormat = Cfg.H24
+            ? (Cfg.ShowSeconds ? "HH:mm:ss" : "HH:mm")
+            : (Cfg.ShowSeconds ? "h:mm:ss tt" : "h:mm tt");
+        string ram = $"{StatusTemplate.FormatBytes(_ram)}/{Math.Ceiling(_hardware.TotalRamGb):0}GB";
+        string vram = _hardware.UsedVramGb is double usedVram
+            ? $"{StatusTemplate.FormatBytes(usedVram)}/{Math.Ceiling(_hardware.TotalVramGb):0}GB"
+            : "Usage unavailable";
+        string battery = Native.GetSystemPowerStatus(out var power) && power.BatteryFlag != 128 && power.BatteryLifePercent <= 100
+            ? $"{power.BatteryLifePercent}%" + (power.ACLineStatus == 1 ? " (charging)" : "")
+            : "N/A";
+        long uptimeSeconds = Environment.TickCount64 / 1000;
+        int days = (int)(uptimeSeconds / 86400), hours = (int)(uptimeSeconds / 3600 % 24), minutes = (int)(uptimeSeconds / 60 % 60);
+
+        return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["time"] = now.ToString(timeFormat, CultureInfo.InvariantCulture),
+            ["date"] = now.ToString(DateFormats[Math.Clamp(Cfg.DateStyle, 0, DateFormats.Length - 1)], CultureInfo.InvariantCulture),
+            ["app"] = _foregroundApp,
+            ["game"] = _foregroundApp,
+            ["song"] = _mediaText.Length == 0 ? "" : Cfg.ShowMediaApp ? $"{_mediaText} ({_mediaApp})" : _mediaText,
+            ["player"] = _mediaApp,
+            ["cpu"] = $"{_cpu:0}%",
+            ["ram"] = ram,
+            ["vram"] = vram,
+            ["battery"] = battery,
+            ["uptime"] = days > 0 ? $"{days}d {hours}h" : $"{hours}h {minutes}m"
+        };
     }
 
     // ---------- main tick (every ~50 ms) ----------
@@ -181,6 +228,7 @@ public sealed class Engine
     {
         double now = Now;
         UpdateIntegrations(now);
+        UpdateTemplateClock();
 
         if (now < _overrideUntil)   // chat mode: ONLY the typed message is sent
         {
@@ -192,6 +240,31 @@ public sealed class Engine
             }
             _force = true;
             return;
+        }
+
+        void UpdateTemplateClock()
+        {
+            string key = "";
+            if (_current != null && Cfg.ShowStatus)
+            {
+                string text = _current.Text;
+                var localNow = DateTime.Now;
+                if (text.Contains("{time}", StringComparison.OrdinalIgnoreCase))
+                {
+                    string format = Cfg.H24
+                        ? (Cfg.ShowSeconds ? "HH:mm:ss" : "HH:mm")
+                        : (Cfg.ShowSeconds ? "h:mm:ss tt" : "h:mm tt");
+                    key += localNow.ToString(format, CultureInfo.InvariantCulture);
+                }
+                if (text.Contains("{date}", StringComparison.OrdinalIgnoreCase))
+                    key += "|" + localNow.ToString(DateFormats[Math.Clamp(Cfg.DateStyle, 0, DateFormats.Length - 1)], CultureInfo.InvariantCulture);
+            }
+
+            if (!string.Equals(key, _lastTemplateClock, StringComparison.Ordinal))
+            {
+                _lastTemplateClock = key;
+                if (key.Length > 0) _force = true;
+            }
         }
 
         bool send = _force;
@@ -217,13 +290,23 @@ public sealed class Engine
         if (now - _lastScan >= 2.0)
         {
             _lastScan = now;
-            if (Cfg.ShowMedia) _ = ScanMediaAsync();
+            bool mediaNeededForTemplate = Messages.Any(message => Usable(message)
+                && (message.Text.Contains("{song}", StringComparison.OrdinalIgnoreCase)
+                    || message.Text.Contains("{player}", StringComparison.OrdinalIgnoreCase)));
+            if (Cfg.ShowMedia || mediaNeededForTemplate) _ = ScanMediaAsync();
             else { _mediaApp = ""; _mediaText = ""; }
-            if (Cfg.ShowApp)
-            {
-                string? app = Desktop.ForegroundApp();
-                if (app != null) _activeApp = app;
-            }
+            var foreground = Desktop.ForegroundWindow();
+            string oldForegroundApp = _foregroundApp;
+            _foregroundApp = foreground?.AppName ?? "";
+            _foregroundExecutable = foreground?.Executable ?? "";
+            _foregroundTitle = foreground?.Title ?? "";
+            if (_foregroundApp.Length > 0) _activeApp = _foregroundApp;
+            if (!string.Equals(oldForegroundApp, _foregroundApp, StringComparison.Ordinal)
+                && Messages.Any(message => Usable(message)
+                    && (message.Text.Contains("{app}", StringComparison.OrdinalIgnoreCase)
+                        || message.Text.Contains("{game}", StringComparison.OrdinalIgnoreCase))))
+                _kick = true;
+            UpdateActiveCollection(now);
         }
 
         // weather: refetch when the city/units change (debounced while typing) or the toggle is switched on
@@ -234,6 +317,7 @@ public sealed class Engine
             _weatherDirty = true;
             _weatherDirtyAt = now;
         }
+
         if (Cfg.ShowWeather != _wShown)
         {
             _wShown = Cfg.ShowWeather;
@@ -248,6 +332,57 @@ public sealed class Engine
                 _ = FetchWeatherAsync();
             }
         }
+    }
+
+    void UpdateActiveCollection(double now)
+    {
+        string? collection = null;
+        var manual = Cfg.StatusProfiles.FirstOrDefault(profile =>
+            profile != null && !string.IsNullOrWhiteSpace(Cfg.ManualProfileName)
+            && string.Equals(profile.Name, Cfg.ManualProfileName, StringComparison.OrdinalIgnoreCase));
+        if (manual != null)
+            collection = manual.Collection;
+        else
+        {
+            var scheduled = Cfg.ScheduledProfiles.FirstOrDefault(profile =>
+                profile != null && IsScheduleActive(profile, DateTime.Now));
+            collection = scheduled?.Collection;
+            if (scheduled == null)
+            {
+                collection = Cfg.StatusProfiles.FirstOrDefault(profile =>
+                    profile != null && !string.IsNullOrWhiteSpace(profile.AppMatch)
+                    && (_foregroundApp.Contains(profile.AppMatch, StringComparison.OrdinalIgnoreCase)
+                        || _foregroundExecutable.Contains(profile.AppMatch, StringComparison.OrdinalIgnoreCase)
+                        || _foregroundTitle.Contains(profile.AppMatch, StringComparison.OrdinalIgnoreCase)))?.Collection;
+            }
+        }
+
+        collection = string.IsNullOrWhiteSpace(collection) ? null : collection.Trim();
+        if (string.Equals(collection, _activeCollection, StringComparison.OrdinalIgnoreCase)) return;
+        _activeCollection = collection;
+        PickStatus();
+        _lastMsg = now;
+        _force = true;
+    }
+
+    public void ConfigurationChanged()
+    {
+        UpdateActiveCollection(Now);
+        _force = true;
+    }
+
+    static bool IsScheduleActive(ScheduledStatusProfile profile, DateTime now)
+    {
+        if (!profile.Enabled
+            || !TimeOnly.TryParseExact(profile.StartTime, "HH:mm", CultureInfo.InvariantCulture, DateTimeStyles.None, out var start)
+            || !TimeOnly.TryParseExact(profile.EndTime, "HH:mm", CultureInfo.InvariantCulture, DateTimeStyles.None, out var end)
+            || start == end)
+            return false;
+
+        var current = TimeOnly.FromDateTime(now);
+        return start < end
+            ? current >= start && current < end
+            : current >= start || current < end;
     }
 
     async Task ScanMediaAsync()

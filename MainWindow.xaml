@@ -92,7 +92,8 @@
                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                     <RadioButton Style="{StaticResource Tab}" Content="Status" Tag="0" IsChecked="True" Checked="Tab_Checked"/>
                     <RadioButton Style="{StaticResource Tab}" Content="Chat" Tag="1" Checked="Tab_Checked"/>
-                    <RadioButton Style="{StaticResource Tab}" Content="Settings" Tag="2" Checked="Tab_Checked"/>
+                    <RadioButton Style="{StaticResource Tab}" Content="Integrations" Tag="2" Checked="Tab_Checked"/>
+                    <RadioButton Style="{StaticResource Tab}" Content="Settings" Tag="3" Checked="Tab_Checked"/>
                 </StackPanel>
 
                 <StackPanel Grid.Column="3" VerticalAlignment="Center" Margin="16,0,0,0">
@@ -145,7 +146,7 @@
                         <StackPanel>
                             <TextBlock Style="{StaticResource CardTitle}" Text="Status messages"/>
                             <TextBlock Style="{StaticResource MutedText}" Margin="0,2,0,0"
-                                       Text="These rotate on the top line of your chatbox. Power = in rotation, heart = favorite. Drag a message to reorder, double-click to edit."/>
+                                       Text="These rotate on the top line. Assign a collection per status; use {time}, {date}, {app}, {song}, {cpu}, {ram}, {vram}, {battery}, or {uptime} for live values."/>
                         </StackPanel>
                     </DockPanel>
 
@@ -160,6 +161,7 @@
                                                 <ColumnDefinition Width="40"/>
                                                 <ColumnDefinition Width="36"/>
                                                 <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="82"/>
                                                 <ColumnDefinition Width="36"/>
                                                 <ColumnDefinition Width="116"/>
                                                 <ColumnDefinition Width="42"/>
@@ -218,21 +220,27 @@
                                                 </Grid>
                                             </Border>
 
+                                            <!-- status collection -->
+                                            <Border Grid.Column="3" Background="{DynamicResource Field}" Padding="4,6">
+                                                <TextBox Text="{Binding Collection, UpdateSourceTrigger=PropertyChanged}"
+                                                         TextChanged="Collection_TextChanged" ToolTip="Collection name used by profiles and schedules"/>
+                                            </Border>
+
                                             <!-- edit -->
-                                            <Border Grid.Column="3" Background="{DynamicResource Card}">
+                                            <Border Grid.Column="4" Background="{DynamicResource Card}">
                                                 <ToggleButton Style="{StaticResource EditToggle}" Focusable="False"
                                                               IsChecked="{Binding IsEditing, Mode=TwoWay}" Click="EditToggle_Click" ToolTip="Edit"/>
                                             </Border>
 
                                             <!-- text style -->
-                                            <Border Grid.Column="4" Background="{DynamicResource Field}" Padding="7,6">
+                                            <Border Grid.Column="5" Background="{DynamicResource Field}" Padding="7,6">
                                                 <ComboBox ItemsSource="{x:Static local:StatusStyles.Names}"
                                                           SelectedIndex="{Binding StyleIndex, Mode=TwoWay}"
                                                           ToolTip="Text style for this message"/>
                                             </Border>
 
                                             <!-- favorite -->
-                                            <Border Grid.Column="5" Background="{DynamicResource CardHi}" CornerRadius="0,8,8,0">
+                                            <Border Grid.Column="6" Background="{DynamicResource CardHi}" CornerRadius="0,8,8,0">
                                                 <ToggleButton Style="{StaticResource HeartToggle}" Focusable="False"
                                                               IsChecked="{Binding Favorite, Mode=TwoWay}" Click="RowChanged_Click"
                                                               ToolTip="Favorite"/>
@@ -252,6 +260,7 @@
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="130"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <Grid>
@@ -263,7 +272,10 @@
                                            Foreground="{DynamicResource Muted}" HorizontalAlignment="Right" VerticalAlignment="Center"
                                            Margin="0,0,12,0"/>
                             </Grid>
-                            <Button Grid.Column="1" Style="{StaticResource Primary}" Content="Create" Height="40" Padding="24,0"
+                            <TextBox x:Name="StatusCollectionEdit" Grid.Column="1" Height="40" Margin="8,0,0,0"
+                                     Padding="8,0" VerticalContentAlignment="Center" Text="Default"
+                                     ToolTip="Collection for the new status"/>
+                            <Button Grid.Column="2" Style="{StaticResource Primary}" Content="Create" Height="40" Padding="24,0"
                                     Margin="10,0,0,0" Click="Add_Click"/>
                         </Grid>
                     </Border>
@@ -282,6 +294,46 @@
                                     <Button Style="{StaticResource Primary}" Padding="22,9" Content="Send chat message" Click="SendChat_Click"/>
                                     <Button Padding="22,9" Content="Stop and show specs" Click="StopChat_Click"/>
                                 </StackPanel>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+
+                <!-- ================= INTEGRATIONS PAGE ================= -->
+                <ScrollViewer x:Name="PageIntegrations" VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Disabled" Visibility="Collapsed">
+                    <StackPanel Margin="0,0,10,0">
+                        <Border Style="{StaticResource CardBox}">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource CardTitle}" Text="Chatbox integrations"/>
+                                <TextBlock Style="{StaticResource MutedText}" Margin="0,3,0,12"
+                                           Text="Turn chatbox content on or off here. Detailed formatting, labels, and service options stay in Settings."/>
+                                <UniformGrid Columns="2">
+                                    <CheckBox Content="Status rotation" IsChecked="{Binding ShowStatus}" Margin="4,6" Click="IntegrationToggle_Click"/>
+                                    <CheckBox Content="CPU usage" IsChecked="{Binding ShowCpu}" Margin="4,6" Click="IntegrationToggle_Click"/>
+                                    <CheckBox Content="RAM usage" IsChecked="{Binding ShowRam}" Margin="4,6" Click="IntegrationToggle_Click"/>
+                                    <CheckBox Content="GPU name" IsChecked="{Binding ShowGpu}" Margin="4,6" Click="IntegrationToggle_Click"/>
+                                    <CheckBox Content="VRAM usage" IsChecked="{Binding ShowVram}" Margin="4,6" Click="IntegrationToggle_Click"/>
+                                    <CheckBox Content="Time" IsChecked="{Binding ShowTime}" Margin="4,6" Click="IntegrationToggle_Click"/>
+                                    <CheckBox Content="Date" IsChecked="{Binding ShowDate}" Margin="4,6" Click="IntegrationToggle_Click"/>
+                                    <CheckBox Content="Weather" IsChecked="{Binding ShowWeather}" Margin="4,6" Click="IntegrationToggle_Click"/>
+                                    <CheckBox Content="Now playing" IsChecked="{Binding ShowMedia}" Margin="4,6" Click="IntegrationToggle_Click"/>
+                                    <CheckBox Content="Foreground app" IsChecked="{Binding ShowApp}" Margin="4,6" Click="IntegrationToggle_Click"/>
+                                    <CheckBox Content="Battery" IsChecked="{Binding ShowBattery}" Margin="4,6" Click="IntegrationToggle_Click"/>
+                                    <CheckBox Content="PC uptime" IsChecked="{Binding ShowUptime}" Margin="4,6" Click="IntegrationToggle_Click"/>
+                                </UniformGrid>
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource CardBox}">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource CardTitle}" Text="Media sources"/>
+                                <TextBlock Style="{StaticResource MutedText}" Margin="0,3,0,8"
+                                           Text="Choose which players are included when Now playing is enabled or referenced by a status template."/>
+                                <UniformGrid Columns="3">
+                                    <CheckBox Content="Spotify" IsChecked="{Binding MediaSpotify}" Margin="4,6" Click="IntegrationToggle_Click"/>
+                                    <CheckBox Content="YouTube" IsChecked="{Binding MediaYoutube}" Margin="4,6" Click="IntegrationToggle_Click"/>
+                                    <CheckBox Content="Other players" IsChecked="{Binding MediaOther}" Margin="4,6" Click="IntegrationToggle_Click"/>
+                                </UniformGrid>
                             </StackPanel>
                         </Border>
                     </StackPanel>
@@ -307,12 +359,107 @@
                     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                         <StackPanel x:Name="SettingsStack" Margin="0,0,8,0">
 
+                            <!-- ===== Status profiles and schedules ===== -->
+                            <Expander Style="{StaticResource Section}" Header="Status profiles &amp; schedules">
+                                <StackPanel>
+                                    <TextBlock Style="{StaticResource Hint}" Margin="0,10,0,0"
+                                               Text="Profiles select a named status collection. Manual selection overrides schedules and app matching until Auto is selected. Schedules take priority over app matching and support overnight times."/>
+                                    <DockPanel Margin="0,12,0,0">
+                                        <ComboBox x:Name="ManualProfileCombo" DockPanel.Dock="Right" Width="220"
+                                                  SelectionChanged="ManualProfileCombo_SelectionChanged"/>
+                                        <TextBlock Style="{StaticResource RowLabel}" Text="Active profile"/>
+                                    </DockPanel>
+                                    <DockPanel Margin="0,6,0,0">
+                                        <TextBlock x:Name="ActiveProfileText" Style="{StaticResource Hint}" Text="Automatic: scheduled, then foreground app, then all statuses."/>
+                                    </DockPanel>
+
+                                    <Border Style="{StaticResource SubCard}">
+                                        <StackPanel>
+                                            <TextBlock Style="{StaticResource SubTitle}" Text="App-matched profiles"/>
+                                            <TextBlock Style="{StaticResource Hint}" Text="Fields below: profile name · text found in the app/window title (blank for manual-only) · collection"/>
+                                            <Grid Margin="0,8,0,0">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="130"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBox x:Name="ProfileNameEdit" Margin="0,0,6,0" ToolTip="Profile name"/>
+                                                <TextBox x:Name="ProfileAppEdit" Grid.Column="1" Margin="6,0" ToolTip="Match any part of app name, executable, or window title"/>
+                                                <TextBox x:Name="ProfileCollectionEdit" Grid.Column="2" Margin="6,0" Text="Default" ToolTip="Status collection to activate"/>
+                                                <Button Grid.Column="3" Content="Add" Padding="14,6" Margin="6,0,0,0" Click="AddProfile_Click"/>
+                                            </Grid>
+                                            <DataGrid x:Name="ProfilesGrid" Margin="0,8,0,0" Height="140"
+                                                      ItemsSource="{Binding StatusProfiles}"
+                                                      AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
+                                                      HeadersVisibility="Column" SelectionMode="Single"
+                                                      CellEditEnding="Profiles_CellEditEnding">
+                                                <DataGrid.Columns>
+                                                    <DataGridTextColumn Header="Profile" Binding="{Binding Name}" IsReadOnly="True" Width="*"/>
+                                                    <DataGridTextColumn Header="App / window contains" Binding="{Binding AppMatch, UpdateSourceTrigger=PropertyChanged}" Width="1.5*"/>
+                                                    <DataGridTextColumn Header="Collection" Binding="{Binding Collection, UpdateSourceTrigger=PropertyChanged}" Width="*"/>
+                                                </DataGrid.Columns>
+                                            </DataGrid>
+                                            <Button Content="Remove selected profile" HorizontalAlignment="Right" Padding="12,6"
+                                                    Margin="0,8,0,0" Click="RemoveProfile_Click"/>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <Border Style="{StaticResource SubCard}">
+                                        <StackPanel>
+                                            <TextBlock Style="{StaticResource SubTitle}" Text="Scheduled collections"/>
+                                            <TextBlock Style="{StaticResource Hint}" Text="Fields below: schedule name · start · end · collection. Use 24-hour HH:mm times; end may be earlier than start for overnight schedules."/>
+                                            <Grid Margin="0,8,0,0">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="80"/>
+                                                    <ColumnDefinition Width="80"/>
+                                                    <ColumnDefinition Width="130"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBox x:Name="ScheduleNameEdit" Margin="0,0,6,0" ToolTip="Schedule name"/>
+                                                <TextBox x:Name="ScheduleStartEdit" Grid.Column="1" Margin="6,0" Text="09:00" ToolTip="Start time (HH:mm)"/>
+                                                <TextBox x:Name="ScheduleEndEdit" Grid.Column="2" Margin="6,0" Text="17:00" ToolTip="End time (HH:mm)"/>
+                                                <TextBox x:Name="ScheduleCollectionEdit" Grid.Column="3" Margin="6,0" Text="Default" ToolTip="Status collection to activate"/>
+                                                <Button Grid.Column="4" Content="Add" Padding="14,6" Margin="6,0,0,0" Click="AddSchedule_Click"/>
+                                            </Grid>
+                                            <DataGrid x:Name="SchedulesGrid" Margin="0,8,0,0" Height="140"
+                                                      ItemsSource="{Binding ScheduledProfiles}"
+                                                      AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
+                                                      HeadersVisibility="Column" SelectionMode="Single"
+                                                      CellEditEnding="Schedules_CellEditEnding">
+                                                <DataGrid.Columns>
+                                                    <DataGridCheckBoxColumn Header="On" Binding="{Binding Enabled, UpdateSourceTrigger=PropertyChanged}" Width="42"/>
+                                                    <DataGridTextColumn Header="Schedule" Binding="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Width="*"/>
+                                                    <DataGridTextColumn Header="Start" Binding="{Binding StartTime, UpdateSourceTrigger=PropertyChanged}" Width="72"/>
+                                                    <DataGridTextColumn Header="End" Binding="{Binding EndTime, UpdateSourceTrigger=PropertyChanged}" Width="72"/>
+                                                    <DataGridTextColumn Header="Collection" Binding="{Binding Collection, UpdateSourceTrigger=PropertyChanged}" Width="*"/>
+                                                </DataGrid.Columns>
+                                            </DataGrid>
+                                            <Button Content="Remove selected schedule" HorizontalAlignment="Right" Padding="12,6"
+                                                    Margin="0,8,0,0" Click="RemoveSchedule_Click"/>
+                                        </StackPanel>
+                                    </Border>
+                                </StackPanel>
+                            </Expander>
+
+                            <!-- ===== Settings backup ===== -->
+                            <Expander Style="{StaticResource Section}" Header="Settings backup">
+                                <StackPanel>
+                                    <TextBlock Style="{StaticResource Hint}" Margin="0,10,0,0"
+                                               Text="Export or restore your app settings, status messages, collections, profiles, and schedules as a JSON file."/>
+                                    <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                                        <Button Style="{StaticResource Primary}" Content="Export settings" Padding="16,8" Click="ExportSettings_Click"/>
+                                        <Button Content="Import settings" Padding="16,8" Margin="8,0,0,0" Click="ImportSettings_Click"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Expander>
+
                             <!-- ===== Status options ===== -->
                             <Expander Style="{StaticResource Section}" Header="Status options">
                                 <StackPanel>
                                     <DockPanel Margin="0,10,0,0">
-                                        <ToggleButton DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="{Binding ShowStatus}"/>
-                                        <TextBlock Style="{StaticResource RowLabel}" Text="Show the status line"/>
+                                        <TextBlock Style="{StaticResource Hint}" Text="Enable or disable Status rotation from the Integrations tab."/>
                                     </DockPanel>
                                     <DockPanel Margin="0,12,0,0">
                                         <ComboBox DockPanel.Dock="Right" Width="180" SelectedIndex="{Binding StatusMode}"
@@ -323,7 +470,7 @@
                                         </ComboBox>
                                         <StackPanel>
                                             <TextBlock Style="{StaticResource RowLabel}" Text="Rotation order"/>
-                                            <TextBlock Style="{StaticResource Hint}" Text="Favorites only falls back to everything if you have no hearts yet."/>
+                                            <TextBlock Style="{StaticResource Hint}" Text="Random rotates within the active collection. Favorites only falls back to everything if none are hearted."/>
                                         </StackPanel>
                                     </DockPanel>
                                     <DockPanel Margin="0,14,0,0">
@@ -378,7 +525,6 @@
                                     <Border Style="{StaticResource SubCard}">
                                         <StackPanel>
                                             <DockPanel>
-                                                <ToggleButton DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="{Binding ShowCpu}"/>
                                                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="0,0,16,0">
                                                     <TextBlock Style="{StaticResource FieldLabel}" Text="Label"/>
                                                     <TextBox Width="120" MaxLength="24" Text="{Binding TagCpu, UpdateSourceTrigger=PropertyChanged, ValidatesOnExceptions=True}"/>
@@ -402,7 +548,6 @@
                                     <Border Style="{StaticResource SubCard}">
                                         <StackPanel>
                                             <DockPanel>
-                                                <ToggleButton DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="{Binding ShowRam}"/>
                                                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="0,0,16,0">
                                                     <TextBlock Style="{StaticResource FieldLabel}" Text="Label"/>
                                                     <TextBox Width="120" MaxLength="24" Text="{Binding TagRam, UpdateSourceTrigger=PropertyChanged, ValidatesOnExceptions=True}"/>
@@ -426,7 +571,6 @@
                                     <Border Style="{StaticResource SubCard}">
                                         <StackPanel>
                                             <DockPanel>
-                                                <ToggleButton DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="{Binding ShowGpu}"/>
                                                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="0,0,16,0">
                                                     <TextBlock Style="{StaticResource FieldLabel}" Text="Label"/>
                                                     <TextBox Width="120" MaxLength="24" Text="{Binding TagGpu, UpdateSourceTrigger=PropertyChanged, ValidatesOnExceptions=True}"/>
@@ -441,7 +585,6 @@
                                     <Border Style="{StaticResource SubCard}">
                                         <StackPanel>
                                             <DockPanel>
-                                                <ToggleButton DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="{Binding ShowVram}"/>
                                                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="0,0,16,0">
                                                     <TextBlock Style="{StaticResource FieldLabel}" Text="Label"/>
                                                     <TextBox Width="120" MaxLength="24" Text="{Binding TagVram, UpdateSourceTrigger=PropertyChanged, ValidatesOnExceptions=True}"/>
@@ -463,12 +606,7 @@
                             <Expander Style="{StaticResource Section}" Header="Time options">
                                 <StackPanel>
                                     <DockPanel Margin="0,10,0,0">
-                                        <ToggleButton DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="{Binding ShowTime}"/>
-                                        <TextBlock Style="{StaticResource RowLabel}" Text="Show time"/>
-                                    </DockPanel>
-                                    <DockPanel Margin="0,12,0,0">
-                                        <ToggleButton DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="{Binding ShowDate}"/>
-                                        <TextBlock Style="{StaticResource RowLabel}" Text="Show date"/>
+                                        <TextBlock Style="{StaticResource Hint}" Text="Enable Time and Date from the Integrations tab."/>
                                     </DockPanel>
                                     <DockPanel Margin="0,12,0,0">
                                         <ToggleButton DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="{Binding H24}"/>
@@ -503,10 +641,8 @@
                             <Expander Style="{StaticResource Section}" Header="Weather options">
                                 <StackPanel>
                                     <DockPanel Margin="0,10,0,0">
-                                        <ToggleButton DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="{Binding ShowWeather}"/>
                                         <StackPanel>
-                                            <TextBlock Style="{StaticResource RowLabel}" Text="Show weather"/>
-                                            <TextBlock Style="{StaticResource Hint}" Text="Current weather from wttr.in. Blank city = auto-detect."/>
+                                            <TextBlock Style="{StaticResource Hint}" Text="Enable Weather from the Integrations tab. Current weather is from wttr.in; blank city auto-detects."/>
                                         </StackPanel>
                                     </DockPanel>
                                     <DockPanel Margin="0,12,0,0">
@@ -533,23 +669,9 @@
                             <Expander Style="{StaticResource Section}" Header="Now playing (Spotify, YouTube, ...) options">
                                 <StackPanel>
                                     <DockPanel Margin="0,10,0,0">
-                                        <ToggleButton DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="{Binding ShowMedia}"/>
                                         <StackPanel>
-                                            <TextBlock Style="{StaticResource RowLabel}" Text="Show now playing"/>
-                                            <TextBlock Style="{StaticResource Hint}" Text="Reads what Windows says is playing, so paused media is ignored."/>
+                                            <TextBlock Style="{StaticResource Hint}" Text="Enable Now playing and choose media sources from the Integrations tab. Paused media is ignored."/>
                                         </StackPanel>
-                                    </DockPanel>
-                                    <DockPanel Margin="0,12,0,0">
-                                        <ToggleButton DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="{Binding MediaSpotify}"/>
-                                        <TextBlock Style="{StaticResource RowLabel}" Text="Spotify"/>
-                                    </DockPanel>
-                                    <DockPanel Margin="0,12,0,0">
-                                        <ToggleButton DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="{Binding MediaYoutube}"/>
-                                        <TextBlock Style="{StaticResource RowLabel}" Text="YouTube"/>
-                                    </DockPanel>
-                                    <DockPanel Margin="0,12,0,0">
-                                        <ToggleButton DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="{Binding MediaOther}"/>
-                                        <TextBlock Style="{StaticResource RowLabel}" Text="Other players"/>
                                     </DockPanel>
                                     <DockPanel Margin="0,12,0,0">
                                         <ToggleButton DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="{Binding ShowMediaApp}"/>
@@ -574,10 +696,8 @@
                             <Expander Style="{StaticResource Section}" Header="App options">
                                 <StackPanel>
                                     <DockPanel Margin="0,10,0,0">
-                                        <ToggleButton DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="{Binding ShowApp}"/>
                                         <StackPanel>
-                                            <TextBlock Style="{StaticResource RowLabel}" Text="Show the app you're using"/>
-                                            <TextBlock Style="{StaticResource Hint}" Text="Shows the program in front, like Chrome or Discord."/>
+                                            <TextBlock Style="{StaticResource Hint}" Text="Enable Foreground app from the Integrations tab."/>
                                         </StackPanel>
                                     </DockPanel>
                                     <DockPanel Margin="0,12,0,0">
@@ -591,16 +711,14 @@
                             <Expander Style="{StaticResource Section}" Header="Battery &amp; uptime options">
                                 <StackPanel>
                                     <DockPanel Margin="0,10,0,0">
-                                        <ToggleButton DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="{Binding ShowBattery}"/>
-                                        <TextBlock Style="{StaticResource RowLabel}" Text="Show battery"/>
+                                        <TextBlock Style="{StaticResource Hint}" Text="Enable Battery from the Integrations tab."/>
                                     </DockPanel>
                                     <DockPanel Margin="0,10,0,0">
                                         <TextBox DockPanel.Dock="Right" Width="150" MaxLength="24" Text="{Binding TagBattery, UpdateSourceTrigger=PropertyChanged}"/>
                                         <TextBlock Style="{StaticResource RowLabel}" Text="Battery label"/>
                                     </DockPanel>
                                     <DockPanel Margin="0,14,0,0">
-                                        <ToggleButton DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="{Binding ShowUptime}"/>
-                                        <TextBlock Style="{StaticResource RowLabel}" Text="Show PC uptime"/>
+                                        <TextBlock Style="{StaticResource Hint}" Text="Enable PC uptime from the Integrations tab."/>
                                     </DockPanel>
                                     <DockPanel Margin="0,10,0,0">
                                         <TextBox DockPanel.Dock="Right" Width="150" MaxLength="24" Text="{Binding TagUptime, UpdateSourceTrigger=PropertyChanged}"/>
@@ -811,7 +929,7 @@
                     <StackPanel Grid.Row="5" VerticalAlignment="Bottom">
                         <Button Style="{StaticResource Primary}" Margin="0,0,0,10" Padding="0,10" Content="Send now" Click="SendNow_Click"/>
                         <Button Margin="0,0,0,12" Padding="0,10" Content="Clear chatbox" Click="Clear_Click"/>
-                        <TextBlock Text="Panda Chatbox  V3.2 (C#)" HorizontalAlignment="Center" FontSize="12.5" Foreground="{DynamicResource Off}"/>
+                        <TextBlock Text="Panda Chatbox  V3.3 (C#)" HorizontalAlignment="Center" FontSize="12.5" Foreground="{DynamicResource Off}"/>
                     </StackPanel>
                 </Grid>
             </Border>

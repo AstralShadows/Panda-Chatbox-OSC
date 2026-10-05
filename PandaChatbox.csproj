@@ -9,7 +9,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>PandaChatbox</AssemblyName>
     <RootNamespace>PandaChatbox</RootNamespace>
-    <Version>3.2.0</Version>
+    <Version>3.3.0</Version>
     <ApplicationIcon>favicon.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>

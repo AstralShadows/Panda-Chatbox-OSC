@@ -1,5 +1,5 @@
 #define AppName "Panda Chatbox"
-#define AppVersion "3.2.0"
+#define AppVersion "3.3.0"
 #define AppPublisher "AstralShadows"
 #define AppExeName "PandaChatbox.exe"
 
@@ -19,7 +19,7 @@ UninstallDisplayIcon={app}\{#AppExeName}
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
-VersionInfoVersion=3.2.0.0
+VersionInfoVersion=3.3.0.0
 VersionInfoProductVersion={#AppVersion}
 VersionInfoProductName={#AppName}
 

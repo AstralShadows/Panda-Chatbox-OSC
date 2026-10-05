@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Globalization;
 using System.IO;
@@ -62,6 +63,9 @@ public class AppSettings
     public int StatusMode { get => _statusMode; set => _statusMode = Math.Clamp(value, 0, 2); }
     public string StatusPrefix { get; set; } = "";
     public string StatusSuffix { get; set; } = "";
+    public ObservableCollection<StatusProfile> StatusProfiles { get; set; } = new();
+    public ObservableCollection<ScheduledStatusProfile> ScheduledProfiles { get; set; } = new();
+    public string ManualProfileName { get; set; } = "";
 
     // ---- timing ----
     double _messageDelay = 3.0, _chatDuration = 4.0, _minSend, _hardwareUpdateInterval = 1.0;
@@ -130,6 +134,28 @@ public class AppSettings
     public string TagApp { get; set; } = "[APP]";
     public string TagBattery { get; set; } = "[BATTERY]";
     public string TagUptime { get; set; } = "[UPTIME]";
+
+    public void CopyFrom(AppSettings source)
+    {
+        foreach (var property in typeof(AppSettings).GetProperties().Where(property => property.CanRead && property.CanWrite))
+            property.SetValue(this, property.GetValue(source));
+    }
+}
+
+public class StatusProfile
+{
+    public string Name { get; set; } = "";
+    public string AppMatch { get; set; } = "";
+    public string Collection { get; set; } = "Default";
+}
+
+public class ScheduledStatusProfile
+{
+    public string Name { get; set; } = "";
+    public string StartTime { get; set; } = "09:00";
+    public string EndTime { get; set; } = "17:00";
+    public string Collection { get; set; } = "Default";
+    public bool Enabled { get; set; } = true;
 }
 
 public class SaveFile
@@ -186,5 +212,21 @@ public static class SettingsStore
         {
             // ignore: saving is best-effort
         }
+    }
+
+    public static void Export(string path, AppSettings settings, IEnumerable<StatusItem> items)
+    {
+        string json = JsonSerializer.Serialize(new SaveFile { Settings = settings, Items = items.ToList() }, Opts);
+        File.WriteAllText(path, json);
+    }
+
+    public static SaveFile Import(string path)
+    {
+        var save = JsonSerializer.Deserialize<SaveFile>(File.ReadAllText(path), Opts)
+            ?? throw new InvalidDataException("The selected backup file is empty or invalid.");
+        if (save.Settings == null)
+            throw new InvalidDataException("The selected backup file does not contain app settings.");
+        save.Items ??= save.Messages?.Select(text => new StatusItem { Text = text }).ToList() ?? new List<StatusItem>();
+        return save;
     }
 }

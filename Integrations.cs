@@ -34,6 +34,7 @@ internal static class Native
 }
 
 internal record WinInfo(string Exe, string Title, bool Visible);
+internal record ForegroundWindowInfo(string AppName, string Executable, string Title);
 
 internal static class Desktop
 {
@@ -60,6 +61,9 @@ internal static class Desktop
     }
 
     public static string? ForegroundApp()
+        => ForegroundWindow()?.AppName;
+
+    public static ForegroundWindowInfo? ForegroundWindow()
     {
         IntPtr h = Native.GetForegroundWindow();
         if (h == IntPtr.Zero) return null;
@@ -67,8 +71,14 @@ internal static class Desktop
         if (pid == Environment.ProcessId) return null;   // ignore ourselves
         try
         {
-            string n = Process.GetProcessById((int)pid).ProcessName;
-            return n.Length == 0 ? null : char.ToUpperInvariant(n[0]) + n[1..];
+            string processName = Process.GetProcessById((int)pid).ProcessName;
+            if (processName.Length == 0) return null;
+            var title = new StringBuilder(512);
+            Native.GetWindowText(h, title, title.Capacity);
+            return new ForegroundWindowInfo(
+                char.ToUpperInvariant(processName[0]) + processName[1..],
+                processName + ".exe",
+                title.ToString());
         }
         catch { return null; }
     }
