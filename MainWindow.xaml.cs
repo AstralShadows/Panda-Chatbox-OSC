@@ -506,10 +506,6 @@ public partial class MainWindow : Window
     }
 
     // ---------------- side panel + header ----------------
-    void Send_Click(object sender, RoutedEventArgs e)
-    {
-        if (_cfg.Send) _eng.Kick(); else _eng.SendClear();
-    }
     void SendNow_Click(object sender, RoutedEventArgs e) => _eng.SendNow();
     void Clear_Click(object sender, RoutedEventArgs e) => _eng.SendClear();
 
