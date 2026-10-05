@@ -1,10 +1,11 @@
 # Panda-Chatbox-OSC
+Just another useless chat box
 
-Panda Chatbox is a Windows WPF application for sending customizable status messages to the VRChat chatbox.
 
-The interface and application orchestration are written in C#. A native C++ DLL handles hardware sampling, OSC networking, Windows desktop information, status templates, and text styles. Inno Setup creates the Windows installer.
+I want to give credit for the idea and UI Idea from Boihanny
 
-Credit for the original idea and UI inspiration goes to Boihanny.
+All code in C# C C++ and Innosetup this is designed for easy setup and above all else UI is supposed to be simple and easy to use with a adjustable background and other adjustable things
+it has full spotify support using windows media manager has fun features like PC up time other stats like PC hardware and more if you have any sugestions please feel free to let me know my discord is astral_shadows
 
 ## Features
 
