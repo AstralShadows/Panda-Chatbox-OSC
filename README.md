@@ -18,6 +18,6 @@ it has full spotify support using windows media manager has fun features like PC
 
 ## Release notifications
 
-The app checks the public GitHub Releases page at startup and every six hours while open. When a newer stable version is available, an update notice appears below the VRChat send controls; selecting it opens the release page. Updates are not downloaded or installed automatically.
+The app checks the public GitHub Releases page at startup and every six hours while open. When a newer stable version is available, a separate update window appears with options to view the release, close it for now, or permanently disable update popups. The update notice below the VRChat send controls can still be used to open the release page. Updates are not downloaded or installed automatically.
 
-Tag this build as `v3.3.0`; use semantic version tags for future releases (for example, `v3.4.0`) so installed copies can compare versions. Keep the `<Version>` in `PandaChatbox.csproj` and `AppVersion` / `VersionInfoVersion` in `PandaChatbox.iss` in sync, then upload the newly built installer to that GitHub release.
+Tag this build as `v3.3.1`; use semantic version tags for future releases (for example, `v3.3.2`) so installed copies can compare versions. Keep the `<Version>` in `PandaChatbox.csproj` and `AppVersion` / `VersionInfoVersion` in `PandaChatbox.iss` in sync, then upload the newly built installer to that GitHub release.

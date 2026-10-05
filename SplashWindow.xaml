@@ -82,7 +82,7 @@
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                         <TextBlock Text="By" FontSize="14" Foreground="#CCFFFFFF"/>
                         <TextBlock Text="AstralShadows" FontSize="14" FontWeight="SemiBold" Foreground="#C2A3FF" Margin="5,0,0,0"/>
-                        <TextBlock Text="V3.3" FontSize="11.5" Foreground="#80FFFFFF" Margin="8,2,0,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="V3.3.1" FontSize="11.5" Foreground="#80FFFFFF" Margin="8,2,0,0" VerticalAlignment="Center"/>
                     </StackPanel>
                     <Button Content="Cancel" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0"
                             Padding="22,7" Background="#33FFFFFF" Click="Cancel_Click"/>

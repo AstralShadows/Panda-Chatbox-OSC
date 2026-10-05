@@ -34,6 +34,7 @@ public class AppSettings
     public bool CustomWindowControls { get; set; } = true;
     public bool TrimToLimit { get; set; } = true;     // cut text at 144 characters before sending
     public bool ShowSplash { get; set; } = true;      // startup screen
+    public bool SuppressUpdateNotifications { get; set; }
 
     int _themeIndex;
     public int ThemeIndex { get => _themeIndex; set => _themeIndex = Math.Clamp(value, 0, ThemeManager.Names.Length - 1); }

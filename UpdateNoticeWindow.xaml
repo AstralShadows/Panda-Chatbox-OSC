@@ -1,0 +1,47 @@
+<Window x:Class="PandaChatbox.UpdateNoticeWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Panda Chatbox update" Icon="favicon.ico" Width="460" Height="300"
+        WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        ResizeMode="NoResize" WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
+        FontFamily="Segoe UI Variable Text, Segoe UI" Foreground="{DynamicResource Text}"
+        UseLayoutRounding="True">
+    <Border CornerRadius="14" BorderThickness="1" BorderBrush="{DynamicResource Edge}"
+            Background="{DynamicResource Panel}">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="52"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <Border Background="{DynamicResource Header}" CornerRadius="14,14,0,0"
+                    MouseLeftButtonDown="Header_MouseLeftButtonDown">
+                <Grid Margin="18,0,10,0">
+                    <TextBlock Text="Panda Chatbox update" FontSize="15" FontWeight="SemiBold"
+                               VerticalAlignment="Center"/>
+                    <Button Content="&#xE8BB;" FontFamily="{StaticResource Icons}" FontSize="12"
+                            Width="32" Height="30" Padding="0" Margin="0" HorizontalAlignment="Right"
+                            VerticalAlignment="Center" ToolTip="Close" Click="Close_Click"/>
+                </Grid>
+            </Border>
+
+            <StackPanel Grid.Row="1" Margin="24,22,24,12">
+                <TextBlock Text="A new version is available" FontSize="21" FontWeight="Bold"/>
+                <TextBlock x:Name="VersionText" Margin="0,8,0,0" FontSize="15"
+                           Foreground="{DynamicResource Lilac}"/>
+                <TextBlock Margin="0,12,0,0" FontSize="13" TextWrapping="Wrap"
+                           Foreground="{DynamicResource Muted}"
+                           Text="You can keep using this version and update whenever you like. The release page has the download and release notes."/>
+            </StackPanel>
+
+            <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right"
+                        Margin="18,0,18,18">
+                <Button Content="Don't show again" Padding="12,8" Click="DontShowAgain_Click"/>
+                <Button Content="Maybe later" Padding="12,8" Click="Close_Click"/>
+                <Button Style="{StaticResource Primary}" Content="View update" Padding="16,8"
+                        Margin="0" Click="ViewUpdate_Click"/>
+            </StackPanel>
+        </Grid>
+    </Border>
+</Window>

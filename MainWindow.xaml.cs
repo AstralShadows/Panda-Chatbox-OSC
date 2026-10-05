@@ -26,8 +26,10 @@ public partial class MainWindow : Window
     bool _updateCheckInProgress;
     bool _updatingProfileUi;
     bool _updateAvailable;
+    bool _updateNoticeShown;
     bool _openReleasePageOnClick;
     Uri? _latestReleaseUri;
+    Version? _latestReleaseVersion;
     DispatcherTimer? _updateTimer;
     readonly CancellationTokenSource _updateCancellation = new();
 
@@ -127,6 +129,7 @@ public partial class MainWindow : Window
             }
 
             _latestReleaseUri = release.PageUri;
+            _latestReleaseVersion = release.Version;
             Version? currentVersion = GetCurrentVersion();
             _updateAvailable = !release.IsPrerelease
                 && release.Version != null
@@ -139,6 +142,8 @@ public partial class MainWindow : Window
                 UpdateButton.Content = $"Update available: v{release.Version} · click to view";
                 UpdateButton.Foreground = (Brush)FindResource("Green");
                 UpdateButton.ToolTip = "Open the GitHub release page to read the notes and download the update.";
+                if (!_cfg.SuppressUpdateNotifications && !_updateNoticeShown)
+                    QueueUpdateNotice();
             }
             else if (release.Version == null)
             {
@@ -184,9 +189,56 @@ public partial class MainWindow : Window
         }
         if (!_openReleasePageOnClick || _latestReleaseUri == null) return;
 
+        if (_updateAvailable)
+        {
+            if (_cfg.SuppressUpdateNotifications)
+            {
+                OpenReleasePage(_latestReleaseUri);
+                return;
+            }
+            ShowUpdateNotice();
+            return;
+        }
+
+        OpenReleasePage(_latestReleaseUri);
+    }
+
+    void ShowUpdateNotice()
+    {
+        if (!IsVisible || !_updateAvailable || _latestReleaseUri == null || _latestReleaseVersion == null) return;
+        var notice = new UpdateNoticeWindow(_latestReleaseVersion, GetCurrentVersion() ?? new Version(0, 0));
+        notice.Owner = this;
+        notice.ShowDialog();
+
+        if (notice.DontShowAgain)
+        {
+            _cfg.SuppressUpdateNotifications = true;
+            SaveNow();
+        }
+        if (notice.OpenReleaseRequested) OpenReleasePage(_latestReleaseUri);
+    }
+
+    void QueueUpdateNotice()
+    {
+        if (_updateNoticeShown || _cfg.SuppressUpdateNotifications) return;
+        _updateNoticeShown = true;
+        if (IsVisible)
+            Dispatcher.BeginInvoke(new Action(ShowUpdateNotice), DispatcherPriority.ApplicationIdle);
+        else
+            Loaded += MainWindow_UpdateNoticeLoaded;
+    }
+
+    void MainWindow_UpdateNoticeLoaded(object sender, RoutedEventArgs e)
+    {
+        Loaded -= MainWindow_UpdateNoticeLoaded;
+        Dispatcher.BeginInvoke(new Action(ShowUpdateNotice), DispatcherPriority.ApplicationIdle);
+    }
+
+    void OpenReleasePage(Uri releaseUri)
+    {
         try
         {
-            Process.Start(new ProcessStartInfo(_latestReleaseUri!.AbsoluteUri) { UseShellExecute = true });
+            Process.Start(new ProcessStartInfo(releaseUri.AbsoluteUri) { UseShellExecute = true });
         }
         catch (Exception exception) when (exception is InvalidOperationException or System.ComponentModel.Win32Exception)
         {

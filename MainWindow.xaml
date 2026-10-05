@@ -974,7 +974,7 @@
                     <StackPanel Grid.Row="5" VerticalAlignment="Bottom">
                         <Button Style="{StaticResource Primary}" Margin="0,0,0,10" Padding="0,10" Content="Send now" Click="SendNow_Click"/>
                         <Button Margin="0,0,0,12" Padding="0,10" Content="Clear chatbox" Click="Clear_Click"/>
-                        <TextBlock Text="Panda Chatbox  V3.3 (C#)" HorizontalAlignment="Center" FontSize="12.5" Foreground="{DynamicResource Off}"/>
+                        <TextBlock Text="Panda Chatbox  V3.3.1 (C#)" HorizontalAlignment="Center" FontSize="12.5" Foreground="{DynamicResource Off}"/>
                     </StackPanel>
                 </Grid>
             </Border>
