@@ -467,9 +467,9 @@ public sealed class Engine
         foreach (var key in order)
         {
             var match = entries.FirstOrDefault(entry => string.Equals(entry.Key, key, StringComparison.OrdinalIgnoreCase));
-            if (match.Text.Length > 0)
+            if (match.Text is { Length: > 0 } text)
             {
-                result.Add(match.Text);
+                result.Add(text);
             }
         }
 
